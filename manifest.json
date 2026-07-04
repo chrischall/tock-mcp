@@ -1,0 +1,74 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/dxt/main/dist/mcpb-manifest.schema.json",
+  "manifest_version": "0.3",
+  "name": "tock-mcp",
+  "display_name": "Tock",
+  "version": "0.0.0",
+  "description": "Tock (exploretock.com) restaurant discovery for Claude — list cities, search a metro, get venue details and their bookable experiences, prices, and open dates/times. Relays every request through the fetchproxy browser extension (github.com/chrischall/fetchproxy) running in your signed-in exploretock.com tab, so there's no cookie paste or bot-wall dance.",
+  "author": {
+    "name": "Chris Chall",
+    "email": "chris.c.hall@gmail.com",
+    "url": "https://github.com/chrischall"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrischall/tock-mcp"
+  },
+  "homepage": "https://github.com/chrischall/tock-mcp",
+  "support": "https://github.com/chrischall/tock-mcp/issues",
+  "license": "MIT",
+  "keywords": [
+    "tock",
+    "exploretock",
+    "reservations",
+    "restaurants",
+    "dining",
+    "booking"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/bundle.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/bundle.js"
+      ]
+    }
+  },
+  "tools": [
+    {
+      "name": "tock_list_metros",
+      "description": "List Tock cities/metros (name, slug, business count), optionally filtered."
+    },
+    {
+      "name": "tock_search_restaurants",
+      "description": "List / search restaurants in a Tock metro by slug, with an optional text query."
+    },
+    {
+      "name": "tock_get_restaurant",
+      "description": "Get full details for a Tock venue by slug: cuisine, price, location, and its bookable experiences."
+    },
+    {
+      "name": "tock_get_availability",
+      "description": "Get a venue's bookable calendar: experiences, prices, party sizes, and open dates/times."
+    },
+    {
+      "name": "tock_list_reservations",
+      "description": "List the signed-in user's Tock purchases / reservations (requires a signed-in exploretock.com tab)."
+    },
+    {
+      "name": "tock_get_profile",
+      "description": "Get the signed-in user's Tock profile (requires a signed-in exploretock.com tab)."
+    }
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ],
+    "runtimes": {
+      "node": ">=22.5.0"
+    }
+  }
+}

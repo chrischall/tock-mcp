@@ -1,0 +1,23 @@
+{
+  "name": "tock-mcp",
+  "displayName": "Tock",
+  "version": "0.0.0",
+  "description": "Tock (exploretock.com) restaurant discovery for Claude — list cities, search a metro, get venue details and their bookable experiences, prices, and open dates/times. Relays through a companion Chrome extension in your signed-in exploretock.com tab.",
+  "author": {
+    "name": "Chris Hall",
+    "email": "chris.c.hall@gmail.com"
+  },
+  "homepage": "https://github.com/chrischall/tock-mcp",
+  "repository": "https://github.com/chrischall/tock-mcp",
+  "license": "MIT",
+  "keywords": [
+    "tock",
+    "exploretock",
+    "reservations",
+    "restaurants",
+    "dining",
+    "mcp"
+  ],
+  "skills": "./SKILL.md",
+  "mcp": "./.mcp.json"
+}
