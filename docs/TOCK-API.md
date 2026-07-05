@@ -125,23 +125,120 @@ The main JS bundle defines only a handful of GraphQL ops (reservation history,
 waitlist, `CreatePaymentCardSetupIntent`) — there is **no** booking/cancel
 mutation in GraphQL.
 
-## Booking / cancel (writes) — not implemented, and not practical
-The actual booking/checkout/cancel *transaction* does **not** use GraphQL — it
-goes through the protobuf `/api/consumer/*` endpoints (`application/octet-stream`,
-opaque binary). Building a write would mean reverse-engineering the protobuf
-message schema per operation. On top of that:
+## Booking / cancel — the protobuf transaction protocol (reverse-engineered)
 
-- Every bookable offering costs money. Offerings are `PREPAID` (Stripe charge),
-  `DEPOSIT` (card hold), or `FREE` — and in a ~50-venue sample across NYC /
-  Chicago / SF the only `FREE` one was a **prepaid pickup** (you still pay for
-  the goods). There is essentially **no free, no-card inventory** to verify a
-  write against net-zero.
-- Checkout is **Turnstile**-gated and payment is **Stripe** (`pk_live_…` in
-  `__ENV__`).
+The booking/checkout/cancel *transaction* does **not** use GraphQL. It's a
+stateful flow of **protobuf** requests (`application/octet-stream`) against
+`/api/ticket/*`. Protobuf wire format is self-describing (field number + wire
+type), so the messages decode without a schema; the shapes below were captured
+live from a real net-zero booking (book + immediate cancel) at a free venue.
 
-So this MCP is read-only: discover / search / venue / availability, plus the
-authenticated GraphQL reads (reservations, profile). Booking stays on
-exploretock.com.
+> **Offering-type gate.** Only offerings whose `ticketPriceInformation.priceType`
+> is **not** `PREPAID`/`DEPOSIT` and whose per-person price is 0 can be booked
+> without a card. In practice that's a small slice — many Tock venues are
+> prepaid or deposit (which add a Stripe/Turnstile step this MCP does NOT drive).
+> `tock_book` therefore refuses any offering that isn't free.
+
+### Wire types used
+`0` = varint (ints/enums), `2` = length-delimited (strings + nested messages).
+Field tags below are `<field#>`.
+
+### Step 1 — lock a slot: `PUT /api/ticket/group/lock`
+Reserves the timeslot for a few minutes. Request (~30 bytes):
+
+```
+60051 (msg) {
+  1: partySize        // varint, e.g. 2
+  2: "YYYY-MM-DDTHH:MM" // local datetime string, e.g. "2026-07-15T14:30"
+  3: experienceId     // varint, e.g. 202361 (the /experience/<id>/ segment)
+  6: 0                // varint (seating/area? observed 0)
+}
+```
+Response: octet-stream (holds the lock). The UI then shows a "holding for M:SS"
+countdown at `/<slug>/checkout/options`.
+
+### Step 2 — price check: `POST /api/ticket/price/consumer`
+Same message shape as the booking confirm (below), returned with the computed
+price. For a free reservation the price is 0. Optional to replicate — it's a
+pre-flight the UI runs; the confirm is authoritative.
+
+### Step 3 — confirm the booking (creates the reservation)
+`POST` (octet-stream) with the field-`60020` message. Observed ~735 bytes with
+the full guest+address block:
+
+```
+60020 (msg) {
+  3: <ticketTypeToken>   // varint; STABLE per experience (identical across two
+                         //   separate bookings of the same experience 10+ min
+                         //   apart) — sourced from the offering, NOT a per-lock
+                         //   nonce. (Working hypothesis; see "gaps" below.)
+  4: experienceId        // varint, e.g. 202361
+  5: 0                   // varint
+  6 (msg) {              // per-ticket quantities
+    1: 0                 // varint
+    2: partySize         // varint (e.g. 1) — count of standard tickets
+    3: 0                 // varint
+  }
+  8 (msg) {              // guest / diner block
+    1: patronId          // varint
+    2: "email"           // string
+    3: "firstName"       // string
+    4: "lastName"        // string
+    5: "phone"           // string, e.g. "555-555-1234"
+    6: "zip"             // string, e.g. "60614"
+    7: 0                 // varint
+    8: "<uuid>"          // string, 36-char UUID (idempotency/request id)
+    10: "<address>"      // string (~street; ~98 bytes observed)
+    11: "<state>"        // string, 2 chars
+    12: "<zip5>"         // string, 5 chars
+    13..21: 0            // varints
+    22: "<token>"        // string, ~20 chars
+  }
+  10: 0
+  11: <fixed32>
+  ...                    // trailing scalars (not fully mapped)
+}
+```
+
+The guest block is **account data** (name, email, phone, zip, address) — sourced
+from the signed-in patron, not user input. No Stripe/Turnstile field appears for
+a free reservation (confirmed: the free path posts a plain octet-stream and
+succeeds with no card).
+
+### Step 4 — cancel: from `/profile/reservations/<purchaseId>/cancel`
+A protobuf `POST`/`PUT` keyed by `purchaseId` (the id in the reservation-detail
+URL). Cancellation is "effective immediately" for free/cancelable offerings.
+
+### Idempotency / duplicate behaviour (observed)
+Re-running the confirm with a **stale** field-`3` token (e.g. re-entering the
+flow after a prior booking) is a **silent no-op**: Tock renders the
+post-booking "Enable text alerts" modal from cached checkout state but creates
+**no** new reservation and returns **no** error. So a fresh lock per booking is
+required, and "the modal appeared" is NOT proof a reservation exists — verify by
+re-reading (see freshness caveat below).
+
+### Verification is slow: the reservations API lags the UI
+Tock's GraphQL `purchases` query (and to a lesser extent the SSR list) can lag
+the Reservations *tab* by minutes for same-session activity — a just-canceled
+reservation showed in the UI's Canceled tab while `purchases(CANCELED)` still
+returned empty. So `tock_book`/`tock_cancel` verify by re-reading the
+reservation-detail page (`/profile/reservations/<id>`), not the list query.
+
+### Known gaps (why this stays confirm-gated + free-only)
+- The **confirm endpoint path** was redacted in capture (the request tears down
+  on the post-booking navigation); the message shape is known, the exact path is
+  pinned at build time from a send-time capture.
+- The **cancel** request bytes weren't cleanly captured (same teardown); cancel
+  is driven by `purchaseId` and verified by re-read.
+- Field `60020.3`'s exact source (offering field vs lock response) is a working
+  hypothesis. Because a wrong value silently no-ops rather than erroring,
+  `tock_book` re-reads to confirm a reservation actually landed.
+
+## Header hints (from the `explore.js` bundle, structure only — no values captured)
+Authenticated app requests carry `X-Tock-Authorization`, `X-Tock-Session`,
+`X-Tock-Csrf-Token`, `X-Tock-Build-Number`, `X-Tock-Scope`,
+`X-Tock-Stream-Format`, etc. We don't set these — the in-tab bridge fetch runs
+with the browser's own cookies/session, and SSR HTML needs none of them.
 
 ## Header hints (from the `explore.js` bundle, structure only — no values captured)
 Authenticated app requests carry `X-Tock-Authorization`, `X-Tock-Session`,
