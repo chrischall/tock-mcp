@@ -255,28 +255,79 @@ export function parseAvailability(calendarSlice: unknown): Availability | null {
   };
 }
 
-// ---- patron (signed-in) ---------------------------------------------------
+// ---- reservations / profile (GraphQL `purchases`) -------------------------
 
-export interface ReservationSummary {
-  raw: Obj;
+export interface Reservation {
+  id?: number;
+  venue?: string;
+  venueSlug?: string;
+  dateTime?: string;
+  partySize?: number;
+  experience?: string;
+  experienceVariety?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  cancelledOrRefunded?: boolean;
+}
+
+export interface AccountIdentity {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  id?: number;
+}
+
+/** Project one GraphQL `purchases` item into a slim reservation summary. */
+export function toReservation(p: Obj): Reservation {
+  const business = isObj(p.business) ? p.business : {};
+  const ticket = isObj(p.ticketType) ? p.ticketType : {};
+  return {
+    id: p.id,
+    venue: business.name || undefined,
+    venueSlug: business.domainName || undefined,
+    dateTime: p.ticketDateTime || undefined,
+    partySize: typeof p.ticketCount === 'number' ? p.ticketCount : undefined,
+    experience: ticket.name || undefined,
+    experienceVariety: ticket.variety || undefined,
+    city: p.city || undefined,
+    state: p.state || undefined,
+    country: p.country || undefined,
+    cancelledOrRefunded:
+      typeof p.cancelledOrRefunded === 'boolean' ? p.cancelledOrRefunded : undefined,
+  };
+}
+
+/** Map a `{ purchases: [...] }` GraphQL payload to reservation summaries. */
+export function parseReservations(data: unknown): Reservation[] {
+  const purchases =
+    isObj(data) && Array.isArray((data as Obj).purchases)
+      ? ((data as Obj).purchases as Obj[])
+      : [];
+  return purchases.map(toReservation);
 }
 
 /**
- * Pull the signed-in patron's purchase history from the 'patron' slice (or a
- * nested app.patron). Returns null when the store carries no patron identity
- * (signed out) so the tool can raise SessionNotAuthenticatedError.
+ * Derive the account holder's identity from a `purchases` payload. Tock has no
+ * standalone profile GraphQL query; each purchase carries `ownerPatron`
+ * (the account holder) and `dinerPatron`. Returns null when no purchase is
+ * present to read identity from.
  */
-export function parsePatron(patronSlice: unknown): Obj | null {
-  if (!isObj(patronSlice)) return null;
-  const patron = isObj((patronSlice as Obj).patron)
-    ? (patronSlice as Obj).patron
-    : patronSlice;
-  // A signed-out store has patron null / no purchase surface at all.
-  const hasIdentity =
-    isObj(patron) &&
-    ('purchaseHistory' in patron ||
-      'purchaseSummaries' in patron ||
-      'firstName' in patron ||
-      'email' in patron);
-  return hasIdentity ? (patron as Obj) : null;
+export function parseAccountIdentity(data: unknown): AccountIdentity | null {
+  const purchases =
+    isObj(data) && Array.isArray((data as Obj).purchases)
+      ? ((data as Obj).purchases as Obj[])
+      : [];
+  for (const p of purchases) {
+    const owner = isObj(p.ownerPatron) ? p.ownerPatron : isObj(p.dinerPatron) ? p.dinerPatron : null;
+    if (owner && (owner.email || owner.firstName)) {
+      return {
+        firstName: owner.firstName || undefined,
+        lastName: owner.lastName || undefined,
+        email: owner.email || undefined,
+        id: owner.id,
+      };
+    }
+  }
+  return null;
 }

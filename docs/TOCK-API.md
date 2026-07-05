@@ -90,23 +90,58 @@ Same `calendar.offerings` store, centered on `date`. Used by `get_availability`.
 `availability` slice stays uninitialized (`isInitialized:false`) — slots render
 from `offerings`, not from that slice.
 
-### `/profile`, `/account` — the signed-in patron (needs a logged-in tab)
-Returns a `$REDUX_STATE` even when signed out, with `app.patron: null`. When
-signed in, the `patron` slice carries `purchaseHistory`, `purchaseSummaries`,
-`wishlist`, etc. `get_reservations` / `get_profile` parse this; when `patron` is
-null / absent they throw `SessionNotAuthenticatedError` (open a signed-in
-exploretock.com tab). `/reservations` and `/user` 302 to login when signed out.
+### `/profile`, `/account` — signed-in, but the data is NOT in the SSR store
+The signed-in `/profile` page **does** embed a `$REDUX_STATE`, but its `patron`
+slice has `purchaseHistory: null` / `purchaseSummaries: []` — the reservation
+data is **lazy-loaded client-side after hydration** (note the
+`isPurchaseHistoryInitialized` flags). So parsing the SSR store for reservations
+returns empty even when signed in. The authenticated reads use the GraphQL API
+below instead.
 
-> Not verified against a signed-in session (would require entering the user's
-> password, which is off-limits). The parsers degrade gracefully: they read the
-> documented `patron.purchaseHistory` / `patron.purchaseSummaries` fields and
-> return what's present, warning to stderr if the shape has drifted.
+## Authenticated reads use a GraphQL API (clean JSON)
+Signed-in data flows through Tock's GraphQL endpoint, with the operation name in
+the **path**:
 
-## Booking (writes) — out of scope for v1
-Tock reservations are overwhelmingly **PREPAID tickets** (Stripe `pk_live_…` in
-`__ENV__`, Turnstile-gated checkout). A booking write means driving Stripe +
-Turnstile + a real charge — too much surface and irreversible spend for a first
-cut. v1 is read-only (discover / search / venue / availability / profile).
+```
+POST /api/graphql/<OperationName>?opname=<OperationName>
+Content-Type: application/json
+{ "operationName": "<OperationName>", "variables": {…}, "query": "<document>" }
+→ 200 { "data": {…} }        // or { "errors": [{message}] }
+```
+
+The bridge fetches this from the signed-in tab (cookies attached). A `401`/`403`
+or an `errors` entry mentioning auth ⇒ `SessionNotAuthenticatedError`.
+
+- **`PatronReservationHistory`** — the reservations list.
+  Variables `{ offset: Int!, limit: Int!, selection: String! }`, `selection ∈
+  {UPCOMING, PAST, CANCELED}`. Returns `data.purchases[]`, each with
+  `business { name, domainName, … }`, `ticketDateTime`, `ticketCount`,
+  `ticketType { name, variety, … }`, `city/country`, `cancelledOrRefunded`,
+  `ownerPatron`/`dinerPatron { firstName, lastName, email, id }`. **Verified live**
+  (`tock_list_reservations`; `tock_get_profile` derives identity from
+  `ownerPatron`). The full query document is pinned in `src/graphql-ops.ts`.
+
+The main JS bundle defines only a handful of GraphQL ops (reservation history,
+waitlist, `CreatePaymentCardSetupIntent`) — there is **no** booking/cancel
+mutation in GraphQL.
+
+## Booking / cancel (writes) — not implemented, and not practical
+The actual booking/checkout/cancel *transaction* does **not** use GraphQL — it
+goes through the protobuf `/api/consumer/*` endpoints (`application/octet-stream`,
+opaque binary). Building a write would mean reverse-engineering the protobuf
+message schema per operation. On top of that:
+
+- Every bookable offering costs money. Offerings are `PREPAID` (Stripe charge),
+  `DEPOSIT` (card hold), or `FREE` — and in a ~50-venue sample across NYC /
+  Chicago / SF the only `FREE` one was a **prepaid pickup** (you still pay for
+  the goods). There is essentially **no free, no-card inventory** to verify a
+  write against net-zero.
+- Checkout is **Turnstile**-gated and payment is **Stripe** (`pk_live_…` in
+  `__ENV__`).
+
+So this MCP is read-only: discover / search / venue / availability, plus the
+authenticated GraphQL reads (reservations, profile). Booking stays on
+exploretock.com.
 
 ## Header hints (from the `explore.js` bundle, structure only — no values captured)
 Authenticated app requests carry `X-Tock-Authorization`, `X-Tock-Session`,

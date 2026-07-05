@@ -54,11 +54,11 @@
     },
     {
       "name": "tock_list_reservations",
-      "description": "List the signed-in user's Tock purchases / reservations (requires a signed-in exploretock.com tab)."
+      "description": "List the signed-in user's Tock reservations (upcoming / past / canceled) via the GraphQL API (requires a signed-in exploretock.com tab)."
     },
     {
       "name": "tock_get_profile",
-      "description": "Get the signed-in user's Tock profile (requires a signed-in exploretock.com tab)."
+      "description": "Get the signed-in user's Tock account identity — name, email (requires a signed-in exploretock.com tab)."
     }
   ],
   "compatibility": {
