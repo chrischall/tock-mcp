@@ -3,7 +3,7 @@
   "manifest_version": "0.3",
   "name": "tock-mcp",
   "display_name": "Tock",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tock (exploretock.com) restaurant discovery for Claude — list cities, search a metro, get venue details and their bookable experiences, prices, and open dates/times. Relays every request through the fetchproxy browser extension (github.com/chrischall/fetchproxy) running in your signed-in exploretock.com tab, so there's no cookie paste or bot-wall dance.",
   "author": {
     "name": "Chris Chall",
