@@ -1,7 +1,7 @@
 {
   "name": "tock-mcp",
   "displayName": "Tock",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Tock (exploretock.com) restaurant discovery for Claude — list cities, search a metro, get venue details and their bookable experiences, prices, and open dates/times. Relays through a companion Chrome extension in your signed-in exploretock.com tab.",
   "author": {
     "name": "Chris Hall",
