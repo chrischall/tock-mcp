@@ -4,7 +4,8 @@ import {
   parseListings,
   parseRestaurant,
   parseAvailability,
-  parsePatron,
+  parseReservations,
+  parseAccountIdentity,
 } from '../src/parse.js';
 
 // Records below mirror the real exploretock.com $REDUX_STATE shapes captured
@@ -145,14 +146,57 @@ describe('parseAvailability', () => {
   });
 });
 
-describe('parsePatron', () => {
-  it('returns the patron record when signed in (has purchase surface)', () => {
-    const slice = { patron: { firstName: 'Sam', purchaseHistory: [{ id: 1 }], purchaseSummaries: [] } };
-    expect(parsePatron(slice)).toMatchObject({ firstName: 'Sam' });
+describe('parseReservations', () => {
+  const data = {
+    purchases: [
+      {
+        id: 42,
+        business: { name: 'Alinea', domainName: 'alinea' },
+        ticketDateTime: '2026-08-01T18:00:00',
+        ticketCount: 2,
+        ticketType: { name: 'The Salon @ Alinea', variety: 'PRIX_FIXE' },
+        city: 'Chicago',
+        country: 'US',
+        cancelledOrRefunded: false,
+      },
+    ],
+  };
+
+  it('projects GraphQL purchases into reservation summaries', () => {
+    const [r] = parseReservations(data);
+    expect(r).toMatchObject({
+      id: 42,
+      venue: 'Alinea',
+      venueSlug: 'alinea',
+      dateTime: '2026-08-01T18:00:00',
+      partySize: 2,
+      experience: 'The Salon @ Alinea',
+      experienceVariety: 'PRIX_FIXE',
+    });
   });
 
-  it('returns null when signed out (no patron identity)', () => {
-    expect(parsePatron({ patron: null })).toBeNull();
-    expect(parsePatron({ numRequestsInProgress: 0, achievements: [] })).toBeNull();
+  it('returns [] when there is no purchases array', () => {
+    expect(parseReservations({})).toEqual([]);
+    expect(parseReservations(null)).toEqual([]);
+  });
+});
+
+describe('parseAccountIdentity', () => {
+  it('reads ownerPatron identity from the first purchase that has it', () => {
+    const data = {
+      purchases: [
+        { id: 1, ownerPatron: { firstName: 'Chris', lastName: 'Hall', email: 'c@example.com', id: 7 } },
+      ],
+    };
+    expect(parseAccountIdentity(data)).toEqual({ firstName: 'Chris', lastName: 'Hall', email: 'c@example.com', id: 7 });
+  });
+
+  it('falls back to dinerPatron when ownerPatron is absent', () => {
+    const data = { purchases: [{ id: 1, dinerPatron: { firstName: 'Sam', email: 's@example.com', id: 3 } }] };
+    expect(parseAccountIdentity(data)).toMatchObject({ firstName: 'Sam', email: 's@example.com' });
+  });
+
+  it('returns null when there are no purchases to read identity from', () => {
+    expect(parseAccountIdentity({ purchases: [] })).toBeNull();
   });
 });

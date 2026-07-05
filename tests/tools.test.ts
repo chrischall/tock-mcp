@@ -3,6 +3,7 @@ import { createTestHarness, parseToolResult } from '@chrischall/mcp-utils/test';
 import { registerDiscoverTools } from '../src/tools/discover.js';
 import { registerRestaurantTools } from '../src/tools/restaurants.js';
 import { registerAccountTools } from '../src/tools/account.js';
+import { SessionNotAuthenticatedError } from '@chrischall/mcp-utils';
 import { stubClient } from './helpers.js';
 
 const metroApp = {
@@ -158,12 +159,54 @@ describe('tock_get_availability', () => {
   });
 });
 
-describe('account tools', () => {
-  it('tock_list_reservations raises a sign-in error when signed out', async () => {
+const purchase = {
+  id: 42,
+  business: { name: 'Alinea', domainName: 'alinea' },
+  ticketDateTime: '2026-08-01T18:00:00',
+  ticketCount: 2,
+  ticketType: { name: 'The Salon @ Alinea', variety: 'PRIX_FIXE' },
+  city: 'Chicago',
+  country: 'US',
+  cancelledOrRefunded: false,
+  ownerPatron: { firstName: 'Chris', lastName: 'Hall', email: 'c@example.com', id: 7 },
+  dinerPatron: { firstName: 'Chris', lastName: 'Hall', email: 'c@example.com', id: 7 },
+};
+
+describe('account tools (GraphQL)', () => {
+  it('tock_list_reservations maps the purchases payload to summaries', async () => {
     const h = await createTestHarness((s) =>
       registerAccountTools(
         s,
-        stubClient({ slices: { '/profile::patron': { patron: null } } })
+        stubClient({ graphql: { 'PatronReservationHistory::UPCOMING': { purchases: [purchase] } } })
+      )
+    );
+    const res = parseToolResult<{ count: number; reservations: { venue: string; venueSlug: string; partySize: number }[] }>(
+      await h.callTool('tock_list_reservations', { status: 'upcoming' })
+    );
+    expect(res.count).toBe(1);
+    expect(res.reservations[0]).toMatchObject({ venue: 'Alinea', venueSlug: 'alinea', partySize: 2, experience: 'The Salon @ Alinea' });
+    await h.close();
+  });
+
+  it('tock_list_reservations selects PAST for status=past', async () => {
+    const h = await createTestHarness((s) =>
+      registerAccountTools(
+        s,
+        stubClient({ graphql: { 'PatronReservationHistory::PAST': { purchases: [] } } })
+      )
+    );
+    const res = parseToolResult<{ count: number }>(
+      await h.callTool('tock_list_reservations', { status: 'past' })
+    );
+    expect(res.count).toBe(0);
+    await h.close();
+  });
+
+  it('tock_list_reservations surfaces the sign-in error from the client', async () => {
+    const h = await createTestHarness((s) =>
+      registerAccountTools(
+        s,
+        stubClient({ graphqlErrors: { PatronReservationHistory: new SessionNotAuthenticatedError('Tock', 'exploretock.com') } })
       )
     );
     const res = await h.callTool('tock_list_reservations', {});
@@ -172,15 +215,34 @@ describe('account tools', () => {
     await h.close();
   });
 
-  it('tock_get_profile projects identity fields when signed in', async () => {
-    const patron = { patron: { firstName: 'Sam', lastName: 'Lee', email: 's@example.com', tockGiftCardBalanceCents: 5000 } };
+  it('tock_get_profile derives identity from ownerPatron', async () => {
     const h = await createTestHarness((s) =>
-      registerAccountTools(s, stubClient({ slices: { '/profile::patron': patron } }))
+      registerAccountTools(
+        s,
+        stubClient({ graphql: { 'PatronReservationHistory::UPCOMING': { purchases: [purchase] } } })
+      )
     );
     const res = parseToolResult<{ firstName: string; email: string }>(
       await h.callTool('tock_get_profile', {})
     );
-    expect(res).toMatchObject({ firstName: 'Sam', email: 's@example.com' });
+    expect(res).toMatchObject({ firstName: 'Chris', email: 'c@example.com' });
+    await h.close();
+  });
+
+  it('tock_get_profile falls back to PAST when no upcoming reservations', async () => {
+    const h = await createTestHarness((s) =>
+      registerAccountTools(
+        s,
+        stubClient({
+          graphql: {
+            'PatronReservationHistory::UPCOMING': { purchases: [] },
+            'PatronReservationHistory::PAST': { purchases: [purchase] },
+          },
+        })
+      )
+    );
+    const res = parseToolResult<{ email: string }>(await h.callTool('tock_get_profile', {}));
+    expect(res.email).toBe('c@example.com');
     await h.close();
   });
 });

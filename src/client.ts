@@ -76,6 +76,60 @@ export class TockClient {
     return out;
   }
 
+  /**
+   * Run a Tock GraphQL operation through the signed-in bridge. Tock routes the
+   * operation name in the path: `POST /api/graphql/<op>?opname=<op>` with a
+   * JSON `{operationName, variables, query}` body. Returns the `data` payload.
+   *
+   * Used for the authenticated reads (reservation history, account identity)
+   * whose data is NOT in the SSR store — it's lazy-loaded from this API. Throws
+   * SessionNotAuthenticatedError when signed out, and McpToolError on GraphQL
+   * or transport errors.
+   */
+  async graphql<T = unknown>(
+    operationName: string,
+    query: string,
+    variables: Record<string, unknown> = {}
+  ): Promise<T> {
+    const path = `/api/graphql/${encodeURIComponent(operationName)}?opname=${encodeURIComponent(
+      operationName
+    )}`;
+    const result = await this.transport.fetch({
+      path,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ operationName, variables, query }),
+    });
+    this.throwIfChallenge(result);
+    this.throwIfSignInPage(result);
+    if (result.status === 401 || result.status === 403) {
+      throw new SessionNotAuthenticatedError('Tock', 'exploretock.com');
+    }
+    this.throwIfNotOk(result, 'POST', path);
+    let parsed: { data?: T; errors?: Array<{ message?: string }> };
+    try {
+      parsed = JSON.parse(result.body);
+    } catch {
+      // A non-JSON 2xx is almost always a bot/sign-in interstitial.
+      throw new McpToolError(
+        `Tock GraphQL ${operationName} returned a non-JSON response.`,
+        {
+          hint: 'Open exploretock.com in the signed-in fetchproxy tab, ensure you are logged in and the Cloudflare check has cleared, then retry.',
+        }
+      );
+    }
+    if (parsed.errors?.length) {
+      const msg = parsed.errors.map((e) => e.message).filter(Boolean).join('; ');
+      if (/auth|sign|login|unauthorized|permission/i.test(msg)) {
+        throw new SessionNotAuthenticatedError('Tock', 'exploretock.com');
+      }
+      throw new McpToolError(
+        `Tock GraphQL ${operationName} error: ${truncateErrorMessage(msg)}`
+      );
+    }
+    return parsed.data as T;
+  }
+
   private throwIfNotOk(result: FetchResult, method: string, path: string): void {
     if (result.status >= 200 && result.status < 300) return;
     // A 403 from Cloudflare is a challenge, not a missing resource — surface

@@ -86,3 +86,49 @@ describe('TockClient error mapping', () => {
     );
   });
 });
+
+describe('TockClient.graphql', () => {
+  it('POSTs to /api/graphql/<op> and returns the data payload', async () => {
+    const t = new StubTransport(ok(JSON.stringify({ data: { purchases: [{ id: 1 }] } })));
+    const client = new TockClient({ transport: t });
+    const data = await client.graphql<{ purchases: unknown[] }>('PatronReservationHistory', 'query {...}', {
+      offset: 0,
+      limit: 30,
+      selection: 'UPCOMING',
+    });
+    expect(data.purchases).toHaveLength(1);
+    expect(t.lastInit?.method).toBe('POST');
+    expect(t.lastInit?.path).toBe(
+      '/api/graphql/PatronReservationHistory?opname=PatronReservationHistory'
+    );
+    expect(JSON.parse(t.lastInit!.body!)).toMatchObject({
+      operationName: 'PatronReservationHistory',
+      variables: { selection: 'UPCOMING' },
+    });
+  });
+
+  it('maps a 401 to SessionNotAuthenticatedError', async () => {
+    const client = new TockClient({
+      transport: new StubTransport({ status: 401, body: '', url: 'x' }),
+    });
+    await expect(client.graphql('X', 'query {...}')).rejects.toBeInstanceOf(
+      SessionNotAuthenticatedError
+    );
+  });
+
+  it('maps an auth-flavored GraphQL error to SessionNotAuthenticatedError', async () => {
+    const client = new TockClient({
+      transport: new StubTransport(ok(JSON.stringify({ errors: [{ message: 'Not authorized' }] }))),
+    });
+    await expect(client.graphql('X', 'query {...}')).rejects.toBeInstanceOf(
+      SessionNotAuthenticatedError
+    );
+  });
+
+  it('throws McpToolError on a non-auth GraphQL error', async () => {
+    const client = new TockClient({
+      transport: new StubTransport(ok(JSON.stringify({ errors: [{ message: 'bad variable' }] }))),
+    });
+    await expect(client.graphql('X', 'query {...}')).rejects.toBeInstanceOf(McpToolError);
+  });
+});
