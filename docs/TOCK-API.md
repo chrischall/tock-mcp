@@ -136,8 +136,9 @@ live from a real net-zero booking (book + immediate cancel) at a free venue.
 > **Offering-type gate.** Only offerings whose `ticketPriceInformation.priceType`
 > is **not** `PREPAID`/`DEPOSIT` and whose per-person price is 0 can be booked
 > without a card. In practice that's a small slice — many Tock venues are
-> prepaid or deposit (which add a Stripe/Turnstile step this MCP does NOT drive).
-> `tock_book` therefore refuses any offering that isn't free.
+> prepaid or deposit (which add a Stripe/Turnstile step). A booking flow would
+> refuse any offering that isn't free; see "Why booking/cancel are NOT
+> implemented" at the end of this section for why no booking flow ships at all.
 
 ### Wire types used
 `0` = varint (ints/enums), `2` = length-delimited (strings + nested messages).
@@ -162,37 +163,43 @@ Same message shape as the booking confirm (below), returned with the computed
 price. For a free reservation the price is 0. Optional to replicate — it's a
 pre-flight the UI runs; the confirm is authoritative.
 
+The lock **response** (octet-stream) returns a **cart id** that becomes
+`60020.3` in the price/confirm message. It is **per-lock**, not stable — two
+bookings of the same experience produced two different, adjacent ids. So the
+confirm cannot be built from public/offering data alone; it needs the live lock
+response.
+
+### Step 2 — price check: `POST /api/ticket/price/consumer`
+Same field-`60020` message as the confirm (below), returned with the computed
+price (0 for a free reservation). A UI pre-flight; the confirm is authoritative.
+
 ### Step 3 — confirm the booking (creates the reservation)
-`POST` (octet-stream) with the field-`60020` message. Observed ~735 bytes with
-the full guest+address block:
+`POST` (octet-stream) with the field-`60020` message. Observed ~735 bytes:
 
 ```
 60020 (msg) {
-  3: <ticketTypeToken>   // varint; STABLE per experience (identical across two
-                         //   separate bookings of the same experience 10+ min
-                         //   apart) — sourced from the offering, NOT a per-lock
-                         //   nonce. (Working hypothesis; see "gaps" below.)
+  3: cartId              // varint — the per-lock id from the lock RESPONSE
   4: experienceId        // varint, e.g. 202361
   5: 0                   // varint
   6 (msg) {              // per-ticket quantities
-    1: 0                 // varint
-    2: partySize         // varint (e.g. 1) — count of standard tickets
-    3: 0                 // varint
+    1: 0
+    2: partySize         // count of standard tickets
+    3: 0
   }
-  8 (msg) {              // guest / diner block
-    1: patronId          // varint
-    2: "email"           // string
-    3: "firstName"       // string
-    4: "lastName"        // string
-    5: "phone"           // string, e.g. "555-555-1234"
-    6: "zip"             // string, e.g. "60614"
-    7: 0                 // varint
-    8: "<uuid>"          // string, 36-char UUID (idempotency/request id)
-    10: "<address>"      // string (~street; ~98 bytes observed)
-    11: "<state>"        // string, 2 chars
-    12: "<zip5>"         // string, 5 chars
-    13..21: 0            // varints
-    22: "<token>"        // string, ~20 chars
+  8 (msg) {              // guest / diner block — ALL sourced from /api/patron/profile
+    1: patron.id             // varint
+    2: patron.email          // string
+    3: patron.firstName      // string
+    4: patron.lastName       // string
+    5: patron.phone          // string
+    6: patron.zipCode        // string
+    7: 0
+    8: patron.uuid           // string, 36-char UUID
+    10: patron.imageUrl      // string (the ~98-byte field is the avatar URL, NOT an address)
+    11: patron.isoCountryCode    // string, 2 chars ("US")
+    12: patron.phoneCountryCode  // string ("+1 US")
+    13..21: 0
+    22: <string, ~20 chars>  // one field not yet mapped
   }
   10: 0
   11: <fixed32>
@@ -200,45 +207,60 @@ the full guest+address block:
 }
 ```
 
-The guest block is **account data** (name, email, phone, zip, address) — sourced
-from the signed-in patron, not user input. No Stripe/Turnstile field appears for
-a free reservation (confirmed: the free path posts a plain octet-stream and
-succeeds with no card).
+`GET /api/patron/profile` returns this guest data as **clean JSON**
+(`result.patron.{id,email,firstName,lastName,phone,zipCode,uuid,imageUrl,
+isoCountryCode,phoneCountryCode}`). No Stripe/Turnstile field appears for a free
+reservation — the free path posts a plain octet-stream and succeeds with no card.
 
 ### Step 4 — cancel: from `/profile/reservations/<purchaseId>/cancel`
-A protobuf `POST`/`PUT` keyed by `purchaseId` (the id in the reservation-detail
-URL). Cancellation is "effective immediately" for free/cancelable offerings.
+A protobuf write keyed by `purchaseId` (the id in the reservation-detail URL).
+"Effective immediately" for free/cancelable offerings. (Exact endpoint/bytes not
+cleanly captured — the request tears down on the post-cancel navigation.)
 
 ### Idempotency / duplicate behaviour (observed)
-Re-running the confirm with a **stale** field-`3` token (e.g. re-entering the
-flow after a prior booking) is a **silent no-op**: Tock renders the
-post-booking "Enable text alerts" modal from cached checkout state but creates
-**no** new reservation and returns **no** error. So a fresh lock per booking is
-required, and "the modal appeared" is NOT proof a reservation exists — verify by
-re-reading (see freshness caveat below).
+Re-running the confirm with a **stale** cart id (re-entering the flow after a
+prior booking) is a **silent no-op**: Tock renders the post-booking "Enable text
+alerts" modal from cached checkout state but creates **no** reservation and
+returns **no** error. So "the modal appeared" is NOT proof a booking exists —
+a fresh lock is required per booking, and success must be confirmed by re-read.
 
 ### Verification is slow: the reservations API lags the UI
-Tock's GraphQL `purchases` query (and to a lesser extent the SSR list) can lag
-the Reservations *tab* by minutes for same-session activity — a just-canceled
-reservation showed in the UI's Canceled tab while `purchases(CANCELED)` still
-returned empty. So `tock_book`/`tock_cancel` verify by re-reading the
-reservation-detail page (`/profile/reservations/<id>`), not the list query.
+Tock's GraphQL `purchases` query lags the Reservations *tab* by minutes-to-longer
+for same-session activity — a just-canceled reservation showed in the UI's
+Canceled tab while `purchases(CANCELED)` still returned empty. Verify a
+book/cancel by re-reading the reservation-detail page
+(`/profile/reservations/<id>`), which shows "Reservation canceled" authoritatively.
 
-### Known gaps (why this stays confirm-gated + free-only)
-- The **confirm endpoint path** was redacted in capture (the request tears down
-  on the post-booking navigation); the message shape is known, the exact path is
-  pinned at build time from a send-time capture.
-- The **cancel** request bytes weren't cleanly captured (same teardown); cancel
-  is driven by `purchaseId` and verified by re-read.
-- Field `60020.3`'s exact source (offering field vs lock response) is a working
-  hypothesis. Because a wrong value silently no-ops rather than erroring,
-  `tock_book` re-reads to confirm a reservation actually landed.
+## Why booking/cancel are NOT implemented (a hard safety boundary)
 
-## Header hints (from the `explore.js` bundle, structure only — no values captured)
-Authenticated app requests carry `X-Tock-Authorization`, `X-Tock-Session`,
-`X-Tock-Csrf-Token`, `X-Tock-Build-Number`, `X-Tock-Scope`,
-`X-Tock-Stream-Format`, etc. We don't set these — the in-tab bridge fetch runs
-with the browser's own cookies/session, and SSR HTML needs none of them.
+Every `/api/ticket/*` request authenticates with app-injected **`X-Tock-*`
+request headers** — not cookies. A **byte-identical** lock replay carrying only
+cookies + `Content-Type` returns `{2:{1:1002, 2:"Unknown business identifier",
+5:404}}`. The real requests add (captured as *names only*):
+
+| header | role |
+| --- | --- |
+| `x-tock-authorization` | **session auth secret** |
+| `x-tock-session` | **session secret** |
+| `x-tock-fingerprint` | **anti-bot device fingerprint** |
+| `x-tock-path` | business/page context (e.g. `/iogodfrey`) — non-secret |
+| `x-tock-scope` | `consumer` — non-secret |
+| `x-tock-build-number`, `x-tock-metro-area-id`, `x-tock-experimentvariantlist`, `x-tock-stream-format` | non-secret |
+
+These headers are set by the app's JS HTTP interceptor from in-page state — a
+plain `fetch`, **including a fetchproxy in-tab fetch**, does not carry them
+(fetchproxy only rides the browser's cookies). So any automated `tock_book`
+would have to either **read and forward the user's live session tokens**
+(credential harvesting) or **reconstruct `x-tock-fingerprint`** (bot-detection
+bypass). Both are boundaries this project does not cross, so the write tools are
+**not shippable** — the protocol above is documented as proven-feasible for the
+record, and the MCP stays read-only.
+
+Everything else needed is solved and safe: the offering-type gate
+(`priceType`/price), the guest block (`/api/patron/profile`, plain JSON), the
+`businessId` (in the SSR store), and the wire codec (`src/protobuf.ts`, which
+encodes the lock message to the exact 30 bytes seen on the wire). The last mile —
+and only the last mile — is the anti-bot/session header gate.
 
 ## Header hints (from the `explore.js` bundle, structure only — no values captured)
 Authenticated app requests carry `X-Tock-Authorization`, `X-Tock-Session`,
