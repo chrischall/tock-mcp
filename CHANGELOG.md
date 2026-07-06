@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.0](https://github.com/chrischall/tock-mcp/compare/v0.1.0...v0.1.0) (2026-07-06)
+
+
+### Documentation
+
+* finalize booking-protocol spec (auth-header findings) ([#7](https://github.com/chrischall/tock-mcp/issues/7)) ([a3147bd](https://github.com/chrischall/tock-mcp/commit/a3147bd9ae86a6b7faec30fa5c3754ab4e945d8d))
+
 ## 0.1.0 (2026-07-05)
 
 
