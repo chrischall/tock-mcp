@@ -158,11 +158,6 @@ Reserves the timeslot for a few minutes. Request (~30 bytes):
 Response: octet-stream (holds the lock). The UI then shows a "holding for M:SS"
 countdown at `/<slug>/checkout/options`.
 
-### Step 2 — price check: `POST /api/ticket/price/consumer`
-Same message shape as the booking confirm (below), returned with the computed
-price. For a free reservation the price is 0. Optional to replicate — it's a
-pre-flight the UI runs; the confirm is authoritative.
-
 The lock **response** (octet-stream) returns a **cart id** that becomes
 `60020.3` in the price/confirm message. It is **per-lock**, not stable — two
 bookings of the same experience produced two different, adjacent ids. So the
