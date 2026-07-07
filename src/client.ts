@@ -4,30 +4,25 @@
 //
 // Error mapping lives here so tool authors never think about it and it stays
 // consistent:
-//   - non-2xx  → HttpError (carries .status)
+//   - non-2xx  → UpstreamHttpError (carries .status)
 //   - Cloudflare "Just a moment" interstitial → McpToolError with a refresh hint
 //   - sign-in redirect / login page → SessionNotAuthenticatedError
 import {
+  isCloudflareChallenge,
   McpToolError,
   SessionNotAuthenticatedError,
   truncateErrorMessage,
+  UpstreamHttpError,
 } from '@chrischall/mcp-utils';
 import { extractReduxSlice } from './redux-state.js';
 import type { FetchResult, TockTransport } from './transport.js';
 
-/** Thrown on any non-2xx response. Carries the numeric `status` so callers
- *  can branch (e.g. get_restaurant treats 404 as "no such venue"). */
-export class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    message: string
-  ) {
-    super(message);
-    this.name = 'HttpError';
-  }
-}
-
-export { SessionNotAuthenticatedError };
+// Non-2xx responses throw the fleet-shared `UpstreamHttpError`
+// (`@chrischall/mcp-utils`), which carries the numeric `.status` so callers
+// can branch (e.g. get_restaurant treats 404 as "no such venue"). It's the
+// status-carrying error the http kit exposes for manual throws; re-exported
+// here for the existing `../client.js` import sites.
+export { SessionNotAuthenticatedError, UpstreamHttpError };
 
 export interface TockClientOptions {
   transport: TockTransport;
@@ -134,26 +129,22 @@ export class TockClient {
     if (result.status >= 200 && result.status < 300) return;
     // A 403 from Cloudflare is a challenge, not a missing resource — surface
     // that as the actionable challenge error rather than a bare HTTP error.
-    if (result.status === 403 && this.looksLikeChallenge(result.body)) {
+    if (result.status === 403 && isCloudflareChallenge(result.body)) {
       this.throwChallenge();
     }
     const collapsed = result.body.replace(/\s+/g, ' ').trim();
     const bodyPreview = collapsed ? ` — ${truncateErrorMessage(collapsed)}` : '';
-    throw new HttpError(
+    throw new UpstreamHttpError(
       result.status,
       `Tock API error: ${result.status} for ${method} ${path}${bodyPreview}`
     );
   }
 
-  private looksLikeChallenge(body: string): boolean {
-    // Definitive Cloudflare managed-challenge markers only (per the fleet's
-    // tightened detection) — not cdn-cgi/challenge-platform, which appears on
-    // cleared pages too.
-    return body.includes('_cf_chl_opt') || body.includes('<title>Just a moment');
-  }
-
   private throwIfChallenge(result: FetchResult): void {
-    if (this.looksLikeChallenge(result.body)) this.throwChallenge();
+    // Definitive Cloudflare managed-challenge markers only (shared
+    // `isCloudflareChallenge`): `_cf_chl_opt` / `<title>Just a moment`, never
+    // cdn-cgi/challenge-platform, which appears on cleared pages too.
+    if (isCloudflareChallenge(result.body)) this.throwChallenge();
   }
 
   private throwChallenge(): never {

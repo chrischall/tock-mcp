@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { TockClient, HttpError, SessionNotAuthenticatedError } from '../src/client.js';
-import { McpToolError } from '@chrischall/mcp-utils';
+import { TockClient, SessionNotAuthenticatedError } from '../src/client.js';
+import { McpToolError, UpstreamHttpError } from '@chrischall/mcp-utils';
 import type { FetchInit, FetchResult, TockTransport } from '../src/transport.js';
 
 class StubTransport implements TockTransport {
@@ -47,14 +47,14 @@ describe('TockClient slice extraction', () => {
 });
 
 describe('TockClient error mapping', () => {
-  it('throws HttpError with the status on a plain non-2xx', async () => {
+  it('throws UpstreamHttpError with the status on a plain non-2xx', async () => {
     const client = new TockClient({
       transport: new StubTransport({ status: 404, body: 'not found', url: 'x' }),
     });
     await expect(client.fetchHtml('/nope')).rejects.toMatchObject({
       status: 404,
     });
-    await expect(client.fetchHtml('/nope')).rejects.toBeInstanceOf(HttpError);
+    await expect(client.fetchHtml('/nope')).rejects.toBeInstanceOf(UpstreamHttpError);
   });
 
   it('maps a Cloudflare challenge (even on a 200) to an actionable McpToolError', async () => {
@@ -65,7 +65,7 @@ describe('TockClient error mapping', () => {
     );
   });
 
-  it('maps a 403 challenge body to the challenge error, not a bare HttpError', async () => {
+  it('maps a 403 challenge body to the challenge error, not a bare UpstreamHttpError', async () => {
     const body = `<html><script>window._cf_chl_opt={};</script></html>`;
     const client = new TockClient({
       transport: new StubTransport({ status: 403, body, url: 'x' }),

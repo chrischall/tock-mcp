@@ -1,7 +1,12 @@
 import { z } from 'zod';
-import { textResult, NonEmptyString, McpToolError } from '@chrischall/mcp-utils';
+import {
+  textResult,
+  NonEmptyString,
+  McpToolError,
+  UpstreamHttpError,
+} from '@chrischall/mcp-utils';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { HttpError, type TockClient } from '../client.js';
+import { type TockClient } from '../client.js';
 import { parseRestaurant, parseAvailability } from '../parse.js';
 
 /** Tock venue slug: the /{slug} path segment (its `domainName`). Reject path
@@ -71,7 +76,7 @@ export function registerRestaurantTools(
         ? `/${input.slug}/search?date=${input.date}&size=${input.party_size ?? 2}`
         : `/${input.slug}`;
       const calendar = await client.fetchSlice(path, 'calendar').catch((e) => {
-        if (e instanceof HttpError && e.status === 404) return null;
+        if (e instanceof UpstreamHttpError && e.status === 404) return null;
         throw e;
       });
       if (calendar === null) {
@@ -123,7 +128,7 @@ async function fetchVenue(
       calendar: unknown;
     };
   } catch (e) {
-    if (e instanceof HttpError && e.status === 404) {
+    if (e instanceof UpstreamHttpError && e.status === 404) {
       throw new McpToolError(`No Tock venue found at "/${slug}".`, {
         hint: 'Check the slug with tock_search_restaurants — it is the exploretock.com/{slug} path segment.',
       });
