@@ -48,7 +48,8 @@ function fieldBytes(field: PbField): Uint8Array {
   const out: number[] = [];
   if (typeof value === 'number' || typeof value === 'bigint') {
     // wire type 0
-    encodeVarint(BigInt(num << 3), out);
+    // Shift in BigInt space: `num << 3` overflows int32 for field numbers ≥ 2²⁸.
+    encodeVarint(BigInt(num) << 3n, out);
     encodeVarint(BigInt(value), out);
   } else {
     // wire type 2 — string / bytes / nested message
@@ -58,7 +59,7 @@ function fieldBytes(field: PbField): Uint8Array {
         : value instanceof Uint8Array
           ? value
           : encode(value); // nested message
-    encodeVarint(BigInt((num << 3) | 2), out);
+    encodeVarint((BigInt(num) << 3n) | 2n, out);
     encodeVarint(BigInt(bytes.length), out);
     out.push(...bytes);
   }

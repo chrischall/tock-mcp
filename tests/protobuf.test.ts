@@ -72,4 +72,20 @@ describe('protobuf codec', () => {
     const decoded = decode(encode([{ field: 60020, value: 1 }]));
     expect(decoded[0].field).toBe(60020);
   });
+
+  it('encodes field numbers ≥ 2^28 without int32 tag overflow', () => {
+    // `num << 3` overflows a signed int32 for field numbers ≥ 2^28 (2^28 << 3
+    // wraps to a negative tag, which encodeVarint rejects). The tag must be
+    // computed in BigInt space. Round-trip both wire types.
+    const bigNum = 2 ** 28; // 268435456
+    const varintDecoded = decode(encode([{ field: bigNum, value: 7 }]));
+    expect(varintDecoded[0].field).toBe(bigNum);
+    expect(varintDecoded[0].wireType).toBe(0);
+    expect(Number(varintDecoded[0].value as bigint)).toBe(7);
+
+    const strDecoded = decode(encode([{ field: bigNum, value: 'hi' }]));
+    expect(strDecoded[0].field).toBe(bigNum);
+    expect(strDecoded[0].wireType).toBe(2);
+    expect(asString(strDecoded[0].value)).toBe('hi');
+  });
 });
