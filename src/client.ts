@@ -19,10 +19,12 @@ import type { FetchResult, TockTransport } from './transport.js';
 
 // Non-2xx responses throw the fleet-shared `UpstreamHttpError`
 // (`@chrischall/mcp-utils`), which carries the numeric `.status` so callers
-// can branch (e.g. get_restaurant treats 404 as "no such venue"). It's the
-// status-carrying error the http kit exposes for manual throws; re-exported
-// here for the existing `../client.js` import sites.
-export { SessionNotAuthenticatedError, UpstreamHttpError };
+// can branch (e.g. get_restaurant treats 404 as "no such venue"). Tools that
+// need it import it straight from `@chrischall/mcp-utils`, so it isn't
+// re-exported here. `SessionNotAuthenticatedError` is re-exported so callers
+// that already import `TockClient` from this module (e.g. the client tests)
+// can pull the error type from the same place.
+export { SessionNotAuthenticatedError };
 
 export interface TockClientOptions {
   transport: TockTransport;
