@@ -8,12 +8,12 @@
 //   - Cloudflare "Just a moment" interstitial → McpToolError with a refresh hint
 //   - sign-in redirect / login page → SessionNotAuthenticatedError
 import {
-  isCloudflareChallenge,
   McpToolError,
   SessionNotAuthenticatedError,
   truncateErrorMessage,
   UpstreamHttpError,
 } from '@chrischall/mcp-utils';
+import { isCloudflareChallenge } from '@chrischall/mcp-utils/scrape';
 import { extractReduxSlice } from './redux-state.js';
 import type { FetchResult, TockTransport } from './transport.js';
 
