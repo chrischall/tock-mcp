@@ -84,8 +84,7 @@
           "jsonpath": "$.metadata.version"
         },
         "src/version.ts"
-      ],
-      "release-as": "0.1.0"
+      ]
     }
   }
 }
