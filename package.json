@@ -31,7 +31,8 @@
     ".mcp.json",
     "server.json",
     "manifest.json",
-    "SKILL.md"
+    "SKILL.md",
+    "skills"
   ],
   "scripts": {
     "build": "tsc && npm run bundle",
