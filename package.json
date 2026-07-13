@@ -31,7 +31,6 @@
     ".mcp.json",
     "server.json",
     "manifest.json",
-    "SKILL.md",
     "skills"
   ],
   "scripts": {
