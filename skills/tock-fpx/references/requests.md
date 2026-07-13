@@ -122,12 +122,13 @@ cat > /tmp/tock-reservations.json <<'JSON'
 JSON
 
 fpx post-json 'https://www.exploretock.com/api/graphql/PatronReservationHistory?opname=PatronReservationHistory' \
-  @/tmp/tock-reservations.json -p tock \
-  | jq -r '.data.purchases[] | "\(.ticketDateTime)\t\(.business.name)\t\(.ticketCount)ppl\t\(.ticketType.name)\(if .cancelledOrRefunded then " [CANCELLED]" else "" end)"'
+  @/tmp/tock-reservations.json -p tock > /tmp/tock-reservations-response.json
+
+jq -r '.data.purchases[] | "\(.ticketDateTime)\t\(.business.name)\t\(.ticketCount)ppl\t\(.ticketType.name)\(if .cancelledOrRefunded then " [CANCELLED]" else "" end)"' /tmp/tock-reservations-response.json
 ```
 
-Check GraphQL-level errors first: `jq '.errors // empty'` — an auth-flavored
-message (matches `/auth|sign|login|unauthorized|permission/i`) means the tab
+Check GraphQL-level errors first: `jq '.errors // empty' /tmp/tock-reservations-response.json` — an
+auth-flavored message (matches `/auth|sign|login|unauthorized|permission/i`) means the tab
 isn't signed in; re-open exploretock.com and log in, then retry.
 
 ## 6. Account identity (no standalone query)
