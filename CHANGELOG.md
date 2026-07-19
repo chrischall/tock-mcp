@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.1](https://github.com/chrischall/tock-mcp/compare/v0.2.0...v0.2.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **release:** pin skill-path so the publish job can resolve SKILL.md ([#35](https://github.com/chrischall/tock-mcp/issues/35)) ([57e1a51](https://github.com/chrischall/tock-mcp/commit/57e1a51533580b8e454efaa1dbc9152a93ff10d6))
+
+
+### Documentation
+
+* add CLAUDE.md ([#31](https://github.com/chrischall/tock-mcp/issues/31)) ([6d86e82](https://github.com/chrischall/tock-mcp/commit/6d86e82585a08ad124cf11bb297a5b39d91054a2))
+
 ## [0.2.0](https://github.com/chrischall/tock-mcp/compare/v0.1.0...v0.2.0) (2026-07-13)
 
 
