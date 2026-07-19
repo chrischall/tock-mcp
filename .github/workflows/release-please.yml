@@ -52,5 +52,11 @@ jobs:
         with:
           version: ${{ needs.release-please.outputs.version }}
           tag-name: ${{ needs.release-please.outputs.tag_name }}
+          # This repo ships TWO skills — skills/tock-mcp (the MCP skill) and
+          # skills/tock-fpx (the fpx-CLI sibling) — so the action's
+          # single-skills/*/SKILL.md auto-discovery can't pick one and hard-
+          # fails the publish job with "Multiple skills/*/SKILL.md found". Pin
+          # the MCP skill that pairs with this npm package.
+          skill-path: skills/tock-mcp/SKILL.md
           clawhub-token: ${{ secrets.CLAWHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
