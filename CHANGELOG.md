@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/chrischall/tock-mcp/compare/v0.2.2...v0.2.3) (2026-07-27)
+
+
+### Documentation
+
+* stop claiming no env config, and credit vitest's default excludes ([#43](https://github.com/chrischall/tock-mcp/issues/43)) ([97d18ac](https://github.com/chrischall/tock-mcp/commit/97d18ac7aced0a79e7c3767d213f3e55e4ea53a2))
+
 ## [0.2.2](https://github.com/chrischall/tock-mcp/compare/v0.2.1...v0.2.2) (2026-07-25)
 
 
