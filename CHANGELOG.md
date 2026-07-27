@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/chrischall/tock-mcp/compare/v0.2.1...v0.2.2) (2026-07-25)
+
+
+### Bug Fixes
+
+* **deps:** bump fast-uri out of the host-confusion advisories ([#37](https://github.com/chrischall/tock-mcp/issues/37)) ([dcc81c9](https://github.com/chrischall/tock-mcp/commit/dcc81c9023078e33d31610fa8a69cac839ce0297))
+
 ## [0.2.1](https://github.com/chrischall/tock-mcp/compare/v0.2.0...v0.2.1) (2026-07-19)
 
 
