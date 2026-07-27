@@ -2,7 +2,7 @@
 
 Read-only MCP server for Tock (exploretock.com): metro directory, per-metro
 restaurant search, venue detail, a venue's bookable calendar, and the signed-in
-user's reservations. Seven `tock_*` tools, stdio, no env config.
+user's reservations. Seven `tock_*` tools, stdio, no required env config (`TOCK_WS_PORT` optionally overrides the fetchproxy concentrator port — see below).
 
 **Archetype: Pattern A** (every call rides the fetchproxy bridge — see
 `docs/fleet-conventions.md` in `chrischall/workflows` for what A vs B means).
@@ -33,9 +33,9 @@ they never touch a transport. `tests/server-boot.test.ts` spawns the real
 `dist/bundle.js` with no `node_modules` and asserts the `tools/list` handshake —
 it builds on demand, so a stale `dist/` won't fail it silently.
 
-`vitest.config.ts` has **no** `exclude` for `**/.claude/**` or `**/dist/**`. If
-you leave an agent worktree under `.claude/worktrees/`, its tests get discovered
-too.
+`vitest.config.ts` adds **no** `exclude` for `**/.claude/**`. If you leave an agent
+worktree under `.claude/worktrees/`, its tests get discovered too. (`**/dist/**`
+needs no entry — vitest's default `test.exclude` already covers it.)
 
 ## The SSR store is a JS object literal, not JSON
 
