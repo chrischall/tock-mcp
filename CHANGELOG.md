@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/chrischall/tock-mcp/compare/v0.2.3...v0.2.4) (2026-07-30)
+
+
+### Bug Fixes
+
+* **deps:** bump @fetchproxy/* to 1.7.0 and @chrischall/mcp-utils to 0.14.0 ([#45](https://github.com/chrischall/tock-mcp/issues/45)) ([af81690](https://github.com/chrischall/tock-mcp/commit/af8169050bf87a59f7ad7e9a9a039a790bbea857))
+
 ## [0.2.3](https://github.com/chrischall/tock-mcp/compare/v0.2.2...v0.2.3) (2026-07-27)
 
 
