@@ -2,7 +2,7 @@
   "name": "tock-mcp",
   "version": "0.2.3",
   "mcpName": "io.github.chrischall/tock-mcp",
-  "description": "Tock (exploretock.com) MCP server for Claude — developed and maintained by AI (Claude Code)",
+  "description": "Tock (exploretock.com) MCP server for Claude \u2014 developed and maintained by AI (Claude Code)",
   "author": "Claude Code (AI) <https://www.anthropic.com/claude>",
   "repository": {
     "type": "git",
@@ -42,8 +42,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@chrischall/mcp-utils": "^0.13.0",
-    "@fetchproxy/server": "^1.3.4",
+    "@chrischall/mcp-utils": "^0.14.0",
+    "@fetchproxy/server": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^17.4.2",
     "zod": "^4.4.3"
