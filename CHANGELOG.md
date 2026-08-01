@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.5](https://github.com/chrischall/tock-mcp/compare/v0.2.4...v0.2.5) (2026-08-01)
+
+
+### Documentation
+
+* **skills:** add the post-booking verification protocol ([#49](https://github.com/chrischall/tock-mcp/issues/49)) ([d499a48](https://github.com/chrischall/tock-mcp/commit/d499a48bcde522553ef4a49d69575fb39b9d9634))
+
 ## [0.2.4](https://github.com/chrischall/tock-mcp/compare/v0.2.3...v0.2.4) (2026-07-30)
 
 
