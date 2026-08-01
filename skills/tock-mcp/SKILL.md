@@ -67,6 +67,26 @@ The first tool call prints a pair code to approve in the Transporter extension p
 3. `tock_get_availability { slug: "alinea", date: "2026-07-10", party_size: 2 }` → see experiences and open dates/times.
 4. To book, open `exploretock.com/<slug>` — reservations are prepaid tickets and are completed on Tock.
 
+## Booking verification protocol
+
+Booking happens outside these tools (on exploretock.com, by hand or by UI
+automation), but **verification is this server's job**. A booking counts as
+**confirmed** only when BOTH hold:
+
+1. a confirmation ID, receipt URL, or confirmation email was captured, **and**
+2. the reservation appears in a `tock_list_reservations` re-query afterward.
+
+Anything less — including a screenshot of a success screen — must be reported
+as **"attempted, unverified."** Two Tock-specific traps make the stricter rule
+non-negotiable:
+
+- The post-booking modal is not proof: a confirm submitted with a stale cart
+  is a silent no-op that still renders the success modal.
+- The reservations backend (`PatronReservationHistory`) lags the Reservations
+  tab by **minutes**. A single immediate re-read proving absence proves
+  nothing; re-query after a couple of minutes (and once more before giving a
+  verdict).
+
 ## Notes
 
 - **Read-only.** No booking, cancelling, or payment — Tock reservations are prepaid/Turnstile-gated checkouts left to the site.
