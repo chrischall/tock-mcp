@@ -106,6 +106,14 @@ fingerprint — both out of scope. This skill (like the MCP) stays read-only;
 book/cancel on exploretock.com itself. Full detail: `docs/TOCK-API.md` in the
 tock-mcp repo.
 
+If a booking was made outside this skill (on the site, by hand or by UI
+automation), treat it as **confirmed** only when a confirmation ID/URL/email
+was captured **and** it shows up in a `PatronReservationHistory` re-query
+afterward; otherwise report it as "attempted, unverified." The post-booking
+modal is not proof (a stale-cart confirm is a silent no-op that still renders
+it), and the reservations backend lags the Reservations tab by minutes — an
+immediate empty re-read proves nothing.
+
 ## Notes
 
 - `fpx health -p tock` shows bridge connection state when a call fails.
