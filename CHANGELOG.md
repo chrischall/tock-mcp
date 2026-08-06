@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/chrischall/tock-mcp/compare/v0.2.5...v0.2.6) (2026-08-06)
+
+
+### Bug Fixes
+
+* **deps:** move to @fetchproxy/server 2.0.0 for the v3 handshake ([#56](https://github.com/chrischall/tock-mcp/issues/56)) ([4df0263](https://github.com/chrischall/tock-mcp/commit/4df02631fbb5bf403f4de532152e414d394b081a))
+
 ## [0.2.5](https://github.com/chrischall/tock-mcp/compare/v0.2.4...v0.2.5) (2026-08-01)
 
 
