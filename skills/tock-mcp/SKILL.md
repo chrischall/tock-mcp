@@ -58,7 +58,7 @@ The first tool call prints a pair code to approve in the Transporter extension p
 | `tock_get_availability` | A venue's bookable calendar: experiences, prices, open dates/times. |
 | `tock_list_reservations` | The signed-in user's purchases / reservations (needs a signed-in tab). |
 | `tock_get_profile` | The signed-in user's profile (needs a signed-in tab). |
-| `tock_verify_reservation` | After a booking attempt, re-query the account and return `confirmed` / `cancelled` / `not_found`. Use this instead of eyeballing a success screen. |
+| `tock_verify_reservation` | After a booking attempt, re-query the account and return `confirmed` / `cancelled` / `not_found` (needs a signed-in tab). Use this instead of eyeballing a success screen. |
 | `tock_healthcheck` | Round-trip the bridge; reports status + the pair code on first run. |
 
 ## Typical flow
@@ -97,5 +97,5 @@ non-negotiable:
 ## Notes
 
 - **Read-only.** No booking, cancelling, or payment — Tock reservations are prepaid/Turnstile-gated checkouts left to the site.
-- **Discovery needs no login.** Only `tock_list_reservations` / `tock_get_profile` require a signed-in exploretock.com tab.
+- **Discovery needs no login.** Only `tock_list_reservations`, `tock_get_profile` and `tock_verify_reservation` require a signed-in exploretock.com tab.
 - Errors are actionable: a Cloudflare challenge asks you to clear it in the signed-in tab; a signed-out account tool asks you to sign in.
