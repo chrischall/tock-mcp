@@ -91,6 +91,16 @@ parsers in that style; a hard-coded path breaks on the next CMS reshuffle.
   `LAG_WINDOW_MINUTES` as inconclusive, because `PatronReservationHistory` lags
   the Reservations tab by minutes. A `not_found` is `"attempted, unverified"` —
   never "failed to book", never a pass.
+  **Live-verified 2026-08-10** through the bridge against the signed-in account:
+  a real past booking (Spaghett 2025-11-13) returns `confirmed` by both name and
+  slug; the incident booking (Soul Gastrolounge 2026-07-31) returns `not_found`
+  with `recheckAdvised: false` at 15000 minutes — independently reproducing the
+  #48 finding from live data; the same query at 1 minute returns
+  `recheckAdvised: true`. Note an omitted `bookedMinutesAgo` always advises a
+  re-check, even for a years-old date. That is deliberate: the lag depends on
+  when the RECORD was created, which the response never reveals, so
+  inconclusive is the only honest default — never report an absence you cannot
+  date.
 - **Tock has no profile query.** `tock_get_profile` derives identity from
   `ownerPatron` on a purchase, so a signed-in account with zero reservations
   yields a deliberate `McpToolError` rather than a fabricated profile. That is
