@@ -2,7 +2,7 @@
 
 Read-only MCP server for Tock (exploretock.com): metro directory, per-metro
 restaurant search, venue detail, a venue's bookable calendar, and the signed-in
-user's reservations. Seven `tock_*` tools, stdio, no required env config (`TOCK_WS_PORT` optionally overrides the fetchproxy concentrator port — see below).
+user's reservations. Eight `tock_*` tools, stdio, no required env config (`TOCK_WS_PORT` optionally overrides the fetchproxy concentrator port — see below).
 
 **Archetype: Pattern A** (every call rides the fetchproxy bridge — see
 `docs/fleet-conventions.md` in `chrischall/workflows` for what A vs B means).
@@ -80,6 +80,17 @@ parsers in that style; a hard-coded path breaks on the next CMS reshuffle.
   `PatronReservationHistory` is pinned (`src/graphql-ops.ts`, query text verbatim
   from the web app). Live-verified 2026-07-05; CI mocks the client, so re-verify
   against a real 200 before treating it as still true.
+- **`tock_verify_reservation` is the incident fix, and its shape is deliberate.**
+  #48: a booking was reported "confirmed" on one screenshot and never existed.
+  #49 wrote the rule into the skills — but prose only helps if the agent
+  remembers it, so the rule is now executable. Three things it must keep doing:
+  read UPCOMING **and** CANCELED **and** PAST (a voided booking only shows in
+  CANCELED, a past-dated one only in PAST — checking `upcoming` alone
+  misreports two of three cases); prefer a live record over a cancelled one for
+  the same venue/date (a rebook leaves both); and treat an absence seen inside
+  `LAG_WINDOW_MINUTES` as inconclusive, because `PatronReservationHistory` lags
+  the Reservations tab by minutes. A `not_found` is `"attempted, unverified"` —
+  never "failed to book", never a pass.
 - **Tock has no profile query.** `tock_get_profile` derives identity from
   `ownerPatron` on a purchase, so a signed-in account with zero reservations
   yields a deliberate `McpToolError` rather than a fabricated profile. That is
