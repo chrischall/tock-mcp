@@ -58,6 +58,7 @@ The first tool call prints a pair code to approve in the Transporter extension p
 | `tock_get_availability` | A venue's bookable calendar: experiences, prices, open dates/times. |
 | `tock_list_reservations` | The signed-in user's purchases / reservations (needs a signed-in tab). |
 | `tock_get_profile` | The signed-in user's profile (needs a signed-in tab). |
+| `tock_verify_reservation` | After a booking attempt, re-query the account and return `confirmed` / `cancelled` / `not_found`. Use this instead of eyeballing a success screen. |
 | `tock_healthcheck` | Round-trip the bridge; reports status + the pair code on first run. |
 
 ## Typical flow
@@ -74,7 +75,13 @@ automation), but **verification is this server's job**. A booking counts as
 **confirmed** only when BOTH hold:
 
 1. a confirmation ID, receipt URL, or confirmation email was captured, **and**
-2. the reservation appears in a `tock_list_reservations` re-query afterward.
+2. `tock_verify_reservation { venue, date, partySize, bookedMinutesAgo }` returns
+   verdict `confirmed`.
+
+Use `tock_verify_reservation` rather than reading `tock_list_reservations`
+yourself: it checks the canceled and past lists too (a created-then-voided
+booking appears only in `canceled`), and it applies the lag rule below for you,
+returning `recheckAdvised: true` when an absence is still inconclusive.
 
 Anything less — including a screenshot of a success screen — must be reported
 as **"attempted, unverified."** Two Tock-specific traps make the stricter rule

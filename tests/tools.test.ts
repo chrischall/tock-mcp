@@ -172,6 +172,160 @@ const purchase = {
   dinerPatron: { firstName: 'Chris', lastName: 'Hall', email: 'c@example.com', id: 7 },
 };
 
+const soul = {
+  id: 99,
+  business: { name: 'Soul Gastrolounge', domainName: 'soulgastrolounge' },
+  ticketDateTime: '2026-07-31T17:00:00',
+  ticketCount: 2,
+  ticketType: { name: 'Dinner', variety: 'RESERVATION' },
+  city: 'Charlotte',
+  cancelledOrRefunded: false,
+};
+
+/** All three selections at once — the tool reads every one before deciding. */
+function allSelections(upcoming: unknown[], canceled: unknown[] = [], past: unknown[] = []) {
+  return {
+    'PatronReservationHistory::UPCOMING': { purchases: upcoming },
+    'PatronReservationHistory::CANCELED': { purchases: canceled },
+    'PatronReservationHistory::PAST': { purchases: past },
+  };
+}
+
+async function verifyHarness(graphql: Record<string, unknown>) {
+  return createTestHarness((s) => registerAccountTools(s, stubClient({ graphql })));
+}
+
+// The incident this encodes: chrischall/tock-mcp#48. A booking was reported
+// "confirmed" on the strength of one screenshot; it did not exist. #49 wrote the
+// rule down in SKILL.md, but prose is only as good as the agent that remembers
+// it — this tool makes the re-query executable and its verdict unambiguous.
+describe('tock_verify_reservation', () => {
+  it('confirms a reservation that is present and not cancelled', async () => {
+    const h = await verifyHarness(allSelections([soul]));
+    const res = parseToolResult<{ verdict: string; match: { venue: string; partySize: number }; recheckAdvised: boolean }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul Gastrolounge', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    expect(res.match).toMatchObject({ venue: 'Soul Gastrolounge', partySize: 2 });
+    expect(res.recheckAdvised).toBe(false);
+    await h.close();
+  });
+
+  it('matches on venue slug and is case-insensitive', async () => {
+    const h = await verifyHarness(allSelections([soul]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'SOULgastro', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
+  it('reports not_found as "attempted, unverified" — never as a pass', async () => {
+    // The exact incident shape: nothing in any list.
+    const h = await verifyHarness(allSelections([], [], []));
+    const res = parseToolResult<{ verdict: string; reportAs: string; searched: Record<string, number> }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul Gastrolounge', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('not_found');
+    expect(res.reportAs).toMatch(/attempted, unverified/i);
+    expect(res.searched).toEqual({ upcoming: 0, canceled: 0, past: 0 });
+    await h.close();
+  });
+
+  it('finds a booking that was created then voided, in the canceled list', async () => {
+    const h = await verifyHarness(allSelections([], [{ ...soul, cancelledOrRefunded: true }]));
+    const res = parseToolResult<{ verdict: string; match: { venue: string } }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('cancelled');
+    expect(res.match.venue).toBe('Soul Gastrolounge');
+    await h.close();
+  });
+
+  it('treats a cancelledOrRefunded record in the upcoming list as cancelled, not confirmed', async () => {
+    const h = await verifyHarness(allSelections([{ ...soul, cancelledOrRefunded: true }]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('cancelled');
+    await h.close();
+  });
+
+  it('finds a past-dated reservation in the past list', async () => {
+    const h = await verifyHarness(allSelections([], [], [soul]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
+  it('does not match a different date at the same venue', async () => {
+    const h = await verifyHarness(allSelections([soul]));
+    const res = parseToolResult<{ verdict: string; searched: Record<string, number> }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-08-01', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('not_found');
+    expect(res.searched.upcoming).toBe(1);
+    await h.close();
+  });
+
+  it('does not match a different party size when one is given', async () => {
+    const h = await verifyHarness(allSelections([soul]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', partySize: 4, bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('not_found');
+    await h.close();
+  });
+
+  // The backend lags the Reservations tab by minutes, so an immediate absence
+  // proves nothing. The tool must say so rather than let it read as failure.
+  it('advises a re-check when absence is too fresh to be proof', async () => {
+    const h = await verifyHarness(allSelections([]));
+    const res = parseToolResult<{ verdict: string; recheckAdvised: boolean; summary: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 1 })
+    );
+    expect(res.verdict).toBe('not_found');
+    expect(res.recheckAdvised).toBe(true);
+    expect(res.summary).toMatch(/lag|too soon|re-?check/i);
+    await h.close();
+  });
+
+  it('advises a re-check when the booking time is unknown', async () => {
+    const h = await verifyHarness(allSelections([]));
+    const res = parseToolResult<{ recheckAdvised: boolean }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31' })
+    );
+    expect(res.recheckAdvised).toBe(true);
+    await h.close();
+  });
+
+  it('stops advising a re-check once the lag window has passed', async () => {
+    const h = await verifyHarness(allSelections([]));
+    const res = parseToolResult<{ recheckAdvised: boolean; summary: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 30 })
+    );
+    expect(res.recheckAdvised).toBe(false);
+    expect(res.summary).toMatch(/no record/i);
+    await h.close();
+  });
+
+  it('surfaces the sign-in error rather than reporting a false not_found', async () => {
+    // A signed-out session must never look like "the booking does not exist".
+    const h = await createTestHarness((s) =>
+      registerAccountTools(
+        s,
+        stubClient({ graphqlErrors: { PatronReservationHistory: new SessionNotAuthenticatedError('Tock', 'exploretock.com') } })
+      )
+    );
+    const res = await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31' });
+    expect(res.isError).toBeTruthy();
+    expect(JSON.stringify(res.content)).toMatch(/sign(ed)? ?in/i);
+    await h.close();
+  });
+});
+
 describe('account tools (GraphQL)', () => {
   it('tock_list_reservations maps the purchases payload to summaries', async () => {
     const h = await createTestHarness((s) =>

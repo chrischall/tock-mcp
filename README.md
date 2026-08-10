@@ -26,6 +26,7 @@ You also need the [fetchproxy browser extension](https://github.com/chrischall/f
 - **`tock_get_restaurant`** — venue details + its bookable experiences.
 - **`tock_get_availability`** — a venue's bookable calendar (experiences, prices, open dates/times).
 - **`tock_list_reservations`** / **`tock_get_profile`** — the signed-in user's purchases and profile.
+- **`tock_verify_reservation`** — after a booking attempt, re-query the account and return an explicit `confirmed` / `cancelled` / `not_found` verdict. A success screen is not proof; this is.
 - **`tock_healthcheck`** — bridge status + the one-time pair code.
 
 ## Develop

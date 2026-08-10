@@ -15,6 +15,7 @@ const EXPECTED = [
   'tock_get_availability',
   'tock_list_reservations',
   'tock_get_profile',
+  'tock_verify_reservation',
 ];
 
 describe('tool roster', () => {
