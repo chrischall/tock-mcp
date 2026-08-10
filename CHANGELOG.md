@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/chrischall/tock-mcp/compare/v0.2.6...v0.3.0) (2026-08-10)
+
+
+### Features
+
+* **verify:** add tock_verify_reservation, an executable booking check ([#59](https://github.com/chrischall/tock-mcp/issues/59)) ([e5eb30e](https://github.com/chrischall/tock-mcp/commit/e5eb30e28d0f0537f38267a8f4aa0c3fa7922cde))
+
+
+### Documentation
+
+* pin the live verification of tock_verify_reservation ([#63](https://github.com/chrischall/tock-mcp/issues/63)) ([7bf2fb4](https://github.com/chrischall/tock-mcp/commit/7bf2fb45181f49d951056d4b5e2604098b3919ea))
+* **skill:** list tock_verify_reservation among the sign-in-gated tools ([#62](https://github.com/chrischall/tock-mcp/issues/62)) ([bb6a249](https://github.com/chrischall/tock-mcp/commit/bb6a249fa17685266012b367b8fcb84bdfcc429c))
+
 ## [0.2.6](https://github.com/chrischall/tock-mcp/compare/v0.2.5...v0.2.6) (2026-08-06)
 
 
