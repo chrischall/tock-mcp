@@ -1,0 +1,36 @@
+version: 1
+name: Tock
+slug: tock
+summary: >-
+  Tock (exploretock.com) restaurant discovery for Claude — list cities,
+  search a metro, get venue details and their bookable experiences, prices,
+  and open dates/times. Relays every request through the fetchproxy browser
+  extension (github.com/chrischall/fetchproxy) running in your signed-in
+  exploretock.com tab, so there's no cookie paste or bot-wall dance.
+#
+# Hosting note (a comment, not user-facing summary text): this is a
+# BROWSER-BRIDGE MCP — it reaches its site through the user's signed-in
+# tab via the fetchproxy bridge. A bridged registration also needs runtime
+# `fly-shared`, `bridge: true` and a `bridgePortEnv`, which are registration
+# fields this manifest has no schema for (set them over the control API).
+# `state.dataDir` below is required for `bridge`.
+env:
+  - name: TOCK_WS_PORT
+    required: false
+    help: >-
+      Concentrator port for the fetchproxy browser bridge (defaults to the
+      fleet-shared 37149). The runner injects a per-registration port for a
+      hosted bridged child, so this is the name to give bridgePortEnv at
+      registration.
+state:
+  dataDir: true
+  reason: >-
+    The fetchproxy identity lives at $HOME/.fetchproxy/identity/<name>.json
+    and the pair code derives from it. Without a persistent $HOME every cold
+    start mints a fresh identity and re-prompts pairing in the browser; the
+    API refuses bridge without it.
+egress:
+  allow:
+    # Only hosts the SERVER process actually fetches. Hosts that appear
+    # solely in a URL this server BUILDS and returns are excluded.
+    - exploretock.com
