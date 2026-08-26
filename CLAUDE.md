@@ -137,21 +137,28 @@ single immediate re-read proves nothing.
 down on the post-cancel navigation, so its endpoint and bytes in
 `docs/TOCK-API.md` are inferred. Field `22` of the guest block is unmapped.
 
-## Landmine: the next release will fail its publish job
+## Both skills publish, and this repo's directory name is why that is safe
 
 This repo ships **two** skills — `skills/tock-mcp/SKILL.md` (MCP usage) and
 `skills/tock-fpx/SKILL.md` (fpx/CLI tier) — and there is no root `SKILL.md`.
-`chrischall/workflows`' `mcp-publish` action resolves the skill as: explicit
-`skill-path` → root `SKILL.md` → *exactly one* `skills/*/SKILL.md`; two or more
-is `exit 1`. `.github/workflows/release-please.yml` passes **no** `skill-path`.
+`release-please.yml` passes **no** `skill-path`, so both are packaged and
+published, each under its own directory name. The resolution rules are
+fleet-wide; `chrischall/workflows`' `docs/fleet-conventions.md` is their
+canonical statement and they are not restated here.
 
-Verified 2026-07-19: at v0.2.0 the action still only looked for a root
-`SKILL.md`, so it printed "SKILL.md not present — skipping skill packaging" and
-the release shipped with **no `.skill` asset and no ClawHub publish** — silently.
-The action has since gained the `skills/*/` resolution *with* the hard failure,
-so the next release will die in the publish job **after** the tag and GitHub
-Release already exist. Pin `skill-path: skills/tock-mcp/SKILL.md` before cutting
-the next release.
+What IS specific to this repo: the primary skill's directory is
+`skills/tock-mcp/`, which is also the repo name — so the directory-name slug it
+publishes under is the same `tock-mcp` slug the old `skill-path` pin produced.
+Unpinning added `tock-fpx` beside it without moving or orphaning anything. The
+fleet's other multi-skill repos were not so lucky (`ofw-mcp` -> `ofw`, and so
+on). **Renaming this directory would move the slug** and strand the existing
+ClawHub listing; don't.
+
+Historical, and still the reason to check that a release actually shipped a
+`.skill`: at v0.2.0 the action only looked for a root `SKILL.md`, printed
+"SKILL.md not present — skipping skill packaging", and cut a release with **no
+`.skill` asset and no ClawHub publish** — silently, with the tag and GitHub
+Release looking clean.
 
 ## Versioning
 
