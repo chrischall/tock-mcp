@@ -30,7 +30,16 @@ state:
     start mints a fresh identity and re-prompts pairing in the browser; the
     API refuses bridge without it.
 egress:
-  allow:
-    # Only hosts the SERVER process actually fetches. Hosts that appear
-    # solely in a URL this server BUILDS and returns are excluded.
-    - exploretock.com
+  # Only hosts the SERVER process actually fetches. Hosts that appear
+  # solely in a URL this server BUILDS and returns are excluded.
+  #
+  # Empty on purpose: this is a pure browser-bridge MCP. Every Tock request
+  # (www.exploretock.com pages and their embedded state) is made by the
+  # user's signed-in tab via the fetchproxy extension, never by this process
+  # (src/transport-fetchproxy.ts is the only transport; there is no direct
+  # mode and no bootstrap that dials). The only socket the process opens is
+  # the loopback concentrator the extension connects TO. Under the
+  # per-child fence the child cannot resolve DNS at all, which is fine —
+  # it never needs to. `exploretock.com` was listed here before, but the
+  # process never dials it, so it admitted nothing.
+  allow: []
