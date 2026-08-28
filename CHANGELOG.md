@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/chrischall/tock-mcp/compare/v0.3.0...v0.3.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **egress:** declare every host the server dials in mint.yaml ([#76](https://github.com/chrischall/tock-mcp/issues/76)) ([7e421d6](https://github.com/chrischall/tock-mcp/commit/7e421d6a1f4737bde140792f2f797750c2e3b524))
+
 ## [0.3.0](https://github.com/chrischall/tock-mcp/compare/v0.2.6...v0.3.0) (2026-08-10)
 
 
