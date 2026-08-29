@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/chrischall/tock-mcp/compare/v0.3.1...v0.4.0) (2026-08-29)
+
+
+### Features
+
+* **deps:** take @fetchproxy/server 2.2.0 so the concentrator can bind its sandbox address ([#78](https://github.com/chrischall/tock-mcp/issues/78)) ([0afc898](https://github.com/chrischall/tock-mcp/commit/0afc898a2e0a16b91c48d759f251081036b95ba4))
+
 ## [0.3.1](https://github.com/chrischall/tock-mcp/compare/v0.3.0...v0.3.1) (2026-08-28)
 
 
