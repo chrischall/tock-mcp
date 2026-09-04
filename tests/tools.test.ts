@@ -116,6 +116,78 @@ describe('tock_get_restaurant', () => {
     expect(res.isError).toBeTruthy();
     await h.close();
   });
+
+  // `parseRestaurant` is the only parsed shape in this server that carries
+  // media URLs, so this tool is the only place compact strips anything real.
+  // It shipped without the `view` wiring once, which made the whole feature a
+  // no-op across the server — hence a test at the TOOL boundary and not just
+  // on the helper.
+  const alineaWithImages = {
+    page: {
+      business: {
+        domainName: 'alinea',
+        name: 'Alinea',
+        cuisines: 'American',
+        priceRange: '$$$$',
+        profileImageUrl: 'https://images.exploretock.com/v1/signed/alinea-profile',
+        heroImageUrl: 'https://images.exploretock.com/v1/signed/alinea-hero',
+      },
+    },
+  };
+  const withImages = () =>
+    stubClient({
+      slices: { '/alinea::app': alineaWithImages, '/alinea::calendar': alineaCalendar },
+    });
+
+  it('strips the venue image URLs by DEFAULT — compact is what a caller gets unasked', async () => {
+    const h = await createTestHarness((s) => registerRestaurantTools(s, withImages()));
+    const res = parseToolResult<Record<string, unknown>>(
+      await h.callTool('tock_get_restaurant', { slug: 'alinea' })
+    );
+    expect(res.name).toBe('Alinea');
+    expect(res.profileImageUrl).toBeUndefined();
+    expect(res.heroImageUrl).toBeUndefined();
+    // Subtractive, so everything that is not a picture is still here.
+    expect(res.priceRange).toBe('$$$$');
+    await h.close();
+  });
+
+  it('returns the image URLs on view: "full"', async () => {
+    const h = await createTestHarness((s) => registerRestaurantTools(s, withImages()));
+    const res = parseToolResult<Record<string, unknown>>(
+      await h.callTool('tock_get_restaurant', { slug: 'alinea', view: 'full' })
+    );
+    expect(res.profileImageUrl).toBe('https://images.exploretock.com/v1/signed/alinea-profile');
+    expect(res.heroImageUrl).toBe('https://images.exploretock.com/v1/signed/alinea-hero');
+    await h.close();
+  });
+
+  it('emits a single line — no pretty-printing on either rung', async () => {
+    const h = await createTestHarness((s) => registerRestaurantTools(s, withImages()));
+    for (const args of [{ slug: 'alinea' }, { slug: 'alinea', view: 'full' }]) {
+      const res = await h.callTool('tock_get_restaurant', args);
+      const text = (res.content as { text: string }[])[0].text;
+      expect(text.includes('\n')).toBe(false);
+    }
+    await h.close();
+  });
+
+  // `view` is a RESPONSE-shape argument; Tock has never heard of it. Two
+  // sibling repos shipped a handler that forwarded its whole args object into
+  // a query string and sent `view=compact` to the live API.
+  it('never forwards `view` upstream', async () => {
+    const paths: string[] = [];
+    const client = withImages();
+    const inner = client.fetchSlices.bind(client);
+    client.fetchSlices = async (path: string, keys: readonly string[]) => {
+      paths.push(path);
+      return inner(path, keys);
+    };
+    const h = await createTestHarness((s) => registerRestaurantTools(s, client));
+    await h.callTool('tock_get_restaurant', { slug: 'alinea', view: 'full' });
+    expect(paths).toEqual(['/alinea']);
+    await h.close();
+  });
 });
 
 describe('tock_get_availability', () => {
