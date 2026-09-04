@@ -1,10 +1,5 @@
 import { z } from 'zod';
-import {
-  textResult,
-  NonEmptyString,
-  McpToolError,
-  UpstreamHttpError,
-} from '@chrischall/mcp-utils';
+import { McpToolError, NonEmptyString, UpstreamHttpError, minifiedResult } from '@chrischall/mcp-utils';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type TockClient } from '../client.js';
 import { parseRestaurant, parseAvailability } from '../parse.js';
@@ -45,7 +40,7 @@ export function registerRestaurantTools(
         );
       }
       const availability = parseAvailability(slices.calendar);
-      return textResult({
+      return minifiedResult({
         ...details,
         experiences: availability?.experiences ?? [],
         openDateCount: availability?.openDates.length ?? 0,
@@ -86,7 +81,7 @@ export function registerRestaurantTools(
       }
       const availability = parseAvailability(calendar);
       if (!availability) {
-        return textResult({
+        return minifiedResult({
           slug: input.slug,
           date: input.date ?? null,
           experiences: [],
@@ -103,7 +98,7 @@ export function registerRestaurantTools(
       }
       const dateOpen =
         input.date === undefined ? undefined : availability.openDates.includes(input.date);
-      return textResult({
+      return minifiedResult({
         slug: input.slug,
         date: input.date ?? null,
         party_size: input.party_size ?? null,
