@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.0](https://github.com/chrischall/tock-mcp/compare/v0.4.0...v0.5.0) (2026-09-04)
+
+
+### Features
+
+* **tools:** compact by default — strip media URLs, and minify every response ([#92](https://github.com/chrischall/tock-mcp/issues/92)) ([a794777](https://github.com/chrischall/tock-mcp/commit/a794777affd493acfeec7e4377ebfd345c4bd3de))
+
+
+### Bug Fixes
+
+* **deps:** pick up @chrischall/mcp-utils 0.23.2 ([#95](https://github.com/chrischall/tock-mcp/issues/95)) ([044ded5](https://github.com/chrischall/tock-mcp/commit/044ded5ab36c01ab94df49b11bbacc7f144f74b1))
+
 ## [0.4.0](https://github.com/chrischall/tock-mcp/compare/v0.3.1...v0.4.0) (2026-08-29)
 
 
