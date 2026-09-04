@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { textResult, McpToolError, SessionNotAuthenticatedError } from '@chrischall/mcp-utils';
+import { McpToolError, SessionNotAuthenticatedError, minifiedResult } from '@chrischall/mcp-utils';
+import { viewArg, viewResponse } from '../view.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { TockClient } from '../client.js';
 import { parseReservations, parseAccountIdentity } from '../parse.js';
@@ -81,7 +82,7 @@ export function registerAccountTools(
         input.limit ?? 30
       );
       const reservations = parseReservations(data);
-      return textResult({
+      return minifiedResult({
         status: input.status ?? 'upcoming',
         count: reservations.length,
         reservations,
@@ -95,9 +96,10 @@ export function registerAccountTools(
       description:
         "Get the signed-in user's Tock account identity (name, email). Requires a browser tab signed in to exploretock.com via the fetchproxy extension. Derived from your reservation records, so it needs at least one reservation on the account.",
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {},
+      inputSchema: {
+        view: viewArg(),},
     },
-    async () => {
+    async ({ view }) => {
       // Tock exposes no standalone profile query; ownerPatron rides on each
       // purchase. Check upcoming first, then past, for an identity to read.
       let identity = parseAccountIdentity(
@@ -115,7 +117,7 @@ export function registerAccountTools(
           { hint: 'Use tock_list_reservations once you have a reservation, or check the account on exploretock.com.' }
         );
       }
-      return textResult(identity);
+      return viewResponse(view, identity);
     }
   );
 
@@ -174,7 +176,7 @@ export function registerAccountTools(
 
       if (match) {
         const cancelled = match.cancelledOrRefunded === true;
-        return textResult({
+        return minifiedResult({
           verdict: cancelled ? 'cancelled' : 'confirmed',
           match,
           searched,
@@ -194,7 +196,7 @@ export function registerAccountTools(
       // the booking was attempted — see LAG_WINDOW_MINUTES.
       const tooSoon =
         input.bookedMinutesAgo === undefined || input.bookedMinutesAgo < LAG_WINDOW_MINUTES;
-      return textResult({
+      return minifiedResult({
         verdict: 'not_found',
         match: null,
         searched,

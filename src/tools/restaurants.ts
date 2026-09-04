@@ -1,12 +1,8 @@
 import { z } from 'zod';
-import {
-  textResult,
-  NonEmptyString,
-  McpToolError,
-  UpstreamHttpError,
-} from '@chrischall/mcp-utils';
+import { McpToolError, NonEmptyString, UpstreamHttpError, minifiedResult } from '@chrischall/mcp-utils';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { type TockClient } from '../client.js';
+import { viewArg, viewResponse } from '../view.js';
 import { parseRestaurant, parseAvailability } from '../parse.js';
 
 /** Tock venue slug: the /{slug} path segment (its `domainName`). Reject path
@@ -32,10 +28,16 @@ export function registerRestaurantTools(
         'Get details for a Tock venue by slug: name, cuisine, price band, location, description, and its bookable experiences (with prices and party sizes). Slug comes from tock_search_restaurants (or a exploretock.com/{slug} URL).',
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: {
+        view: viewArg(),
         slug: VenueSlug,
       },
     },
-    async (input) => {
+    // `view` is destructured OFF before anything else touches the input. It is
+    // a RESPONSE-shape argument and Tock has never heard of it; two sibling
+    // repos shipped a handler that forwarded its whole args object into a
+    // query string and sent `view=compact` upstream. Nothing below builds a
+    // request from this object today, and this shape means nothing can start.
+    async ({ view, ...input }) => {
       const slices = await fetchVenue(client, input.slug);
       const details = parseRestaurant(slices.app, input.slug);
       if (!details) {
@@ -45,7 +47,7 @@ export function registerRestaurantTools(
         );
       }
       const availability = parseAvailability(slices.calendar);
-      return textResult({
+      return viewResponse(view, {
         ...details,
         experiences: availability?.experiences ?? [],
         openDateCount: availability?.openDates.length ?? 0,
@@ -86,7 +88,7 @@ export function registerRestaurantTools(
       }
       const availability = parseAvailability(calendar);
       if (!availability) {
-        return textResult({
+        return minifiedResult({
           slug: input.slug,
           date: input.date ?? null,
           experiences: [],
@@ -103,7 +105,7 @@ export function registerRestaurantTools(
       }
       const dateOpen =
         input.date === undefined ? undefined : availability.openDates.includes(input.date);
-      return textResult({
+      return minifiedResult({
         slug: input.slug,
         date: input.date ?? null,
         party_size: input.party_size ?? null,

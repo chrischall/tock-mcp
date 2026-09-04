@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { textResult, NonEmptyString } from '@chrischall/mcp-utils';
+import { NonEmptyString, minifiedResult } from '@chrischall/mcp-utils';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { TockClient } from '../client.js';
 import { parseMetros, parseListings } from '../parse.js';
@@ -53,7 +53,7 @@ export function registerDiscoverTools(
       }
       metros.sort((a, b) => b.businessCount - a.businessCount);
       const limit = input.limit ?? 100;
-      return textResult({ count: metros.length, metros: metros.slice(0, limit) });
+      return minifiedResult({ count: metros.length, metros: metros.slice(0, limit) });
     }
   );
 
@@ -86,7 +86,7 @@ export function registerDiscoverTools(
       const consumerPage = await client.fetchSlice(path, 'consumerPage');
       const results = parseListings(consumerPage);
       const limit = input.limit ?? 50;
-      return textResult({
+      return minifiedResult({
         metro: input.metro,
         query: input.query ?? null,
         count: results.length,
