@@ -61,6 +61,67 @@ The first tool call prints a pair code to approve in the Transporter extension p
 | `tock_verify_reservation` | After a booking attempt, re-query the account and return `confirmed` / `cancelled` / `not_found` (needs a signed-in tab). Use this instead of eyeballing a success screen. |
 | `tock_healthcheck` | Round-trip the bridge; reports status + the pair code on first run. |
 
+## Response shape (`view`)
+
+Two tools take `view: "compact" | "full"` — `tock_get_restaurant` and
+`tock_get_profile` — and **`compact` is the default**, so you get the slim
+rung without asking for it. The other six of this server's eight tools have no
+`view`; each for its own reason, below.
+
+**Compact here is media stripping, not a field projection.** `src/view.ts`
+holds no hand-written field list, because this repo has no captured Tock
+payload to derive one from honestly. What it does instead is subtractive: drop
+keys whose value is a picture, plus **two named explicitly** —
+`profileImageUrl` and `heroImageUrl`.
+
+Naming those two is the load-bearing part, and it is worth knowing why. The
+shared rule anchors its media noun at the START of the key, which is what
+keeps a flag like `hasThumbnail` alive — and it is also why `profileImageUrl`
+(starts `profile`) and `heroImageUrl` (starts `hero`) both slip past it. That
+would leave only the fallback rule, which fires when a URL's path happens to
+end in an image extension. A signed or extension-less Tock CDN URL would then
+survive compact silently, with nothing in the response to say why. Naming the
+keys removes the dependency on what a URL happens to look like.
+
+Those two are the only image fields any parsed shape in this server carries —
+they live on `RestaurantDetails` and nowhere else — and **nothing is kept**:
+no tool here has a picture as its product, so no payload mixes decoration with
+content.
+
+Expect one specific non-effect: on **`tock_get_profile` compact provably
+removes nothing.** The identity record is four fields (`firstName`,
+`lastName`, `email`, `id`), none of them a picture, so both rungs serialise to
+the same bytes. The rung is declared there for consistency, not for savings.
+
+`view: "full"` returns the parsed record untouched. There is deliberately **no
+`raw` rung**: `full` already IS the record this server parsed out of Tock's
+page, so a third value would silently alias one that exists.
+
+Why the other six have none:
+
+- **`tock_search_restaurants`** returns `RestaurantSummary`, which carries no
+  image key at all — the two image fields exist only on the *details* shape.
+  That is exactly why one of the two restaurant tools has a rung and the other
+  does not; it is not an omission.
+- **`tock_list_metros`** returns hand-built metro records (name, slug, state,
+  country, business count, coordinates). No picture, and no fatter upstream
+  shape behind them to project away from.
+- **`tock_get_availability`** returns an ASSEMBLED calendar — experiences,
+  `openDates`, `openTimes` — built by the parser from Tock's calendar slice,
+  not a pass-through payload. There is no single upstream object to hand back
+  or to slim.
+- **`tock_list_reservations`** returns hand-built reservation records (venue,
+  date/time, party size, experience, cancelled flag) with no media field.
+- **`tock_verify_reservation`** returns a VERDICT — `verdict`, `match`,
+  `searched`, `recheckAdvised`, `reportAs`, `summary`. The verdict is the
+  product, and there is nothing decorative in it to remove.
+- **`tock_healthcheck`** returns a bridge diagnostic, for the same reason.
+
+Passing `view` to one of those is not an error and will not fail: the tool
+does not declare it, so zod drops the unknown key and the call runs exactly as
+it would have. You get no warning, so a successful call is not evidence the
+rung was honoured.
+
 ## Typical flow
 
 1. `tock_list_metros { query: "chicago" }` → find the metro slug.
