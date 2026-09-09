@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/chrischall/tock-mcp/compare/v0.5.0...v0.5.1) (2026-09-09)
+
+
+### Bug Fixes
+
+* **deps:** require @fetchproxy/server ^2.7.0, the first that reads FETCHPROXY_IDENTITY_DIR ([#103](https://github.com/chrischall/tock-mcp/issues/103)) ([0658775](https://github.com/chrischall/tock-mcp/commit/06587750eb67c96fde20ac3e9bb86bc94e103265))
+
 ## [0.5.0](https://github.com/chrischall/tock-mcp/compare/v0.4.0...v0.5.0) (2026-09-04)
 
 
