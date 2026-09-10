@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.2](https://github.com/chrischall/tock-mcp/compare/v0.5.1...v0.5.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **deps:** @fetchproxy/server 2.10.0 and @chrischall/mcp-utils 0.26.1 ([#107](https://github.com/chrischall/tock-mcp/issues/107)) ([31676dd](https://github.com/chrischall/tock-mcp/commit/31676dd7826c5d7301d9ac10ba5d342d1a2f8909))
+* **deps:** declare the peer floors mcp-utils 0.26.1 requires ([#108](https://github.com/chrischall/tock-mcp/issues/108)) ([a6be0e8](https://github.com/chrischall/tock-mcp/commit/a6be0e8e9eb2742403fb83667765684ce44bcec1))
+* **deps:** take @fetchproxy/server 2.9.1 so a pairing prompt survives ([#105](https://github.com/chrischall/tock-mcp/issues/105)) ([f92b966](https://github.com/chrischall/tock-mcp/commit/f92b966b8c1ee499e75a527f13c197fe69c8cbf5))
+
 ## [0.5.1](https://github.com/chrischall/tock-mcp/compare/v0.5.0...v0.5.1) (2026-09-09)
 
 
