@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.3](https://github.com/chrischall/tock-mcp/compare/v0.5.2...v0.5.3) (2026-09-12)
+
+
+### Bug Fixes
+
+* **deps:** @fetchproxy/server 2.11.3, so the hosted extension pin persists ([#109](https://github.com/chrischall/tock-mcp/issues/109)) ([7ca5b56](https://github.com/chrischall/tock-mcp/commit/7ca5b56828e775081f45e4e33d1f762080adb322))
+* **deps:** Bump zod in the production-dependencies group ([#112](https://github.com/chrischall/tock-mcp/issues/112)) ([b54d3d0](https://github.com/chrischall/tock-mcp/commit/b54d3d0d7360cb8ff47782696d11970a8463cf47))
+
 ## [0.5.2](https://github.com/chrischall/tock-mcp/compare/v0.5.1...v0.5.2) (2026-09-10)
 
 
