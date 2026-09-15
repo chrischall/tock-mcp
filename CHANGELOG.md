@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4](https://github.com/chrischall/tock-mcp/compare/v0.5.3...v0.5.4) (2026-09-15)
+
+
+### Bug Fixes
+
+* **deps:** @fetchproxy/server 3.0.1 — capped peer frames, logged load drops, atomic identity writes ([#114](https://github.com/chrischall/tock-mcp/issues/114)) ([e8acf91](https://github.com/chrischall/tock-mcp/commit/e8acf91bde9da9997369358eb864370372a965e7))
+
 ## [0.5.3](https://github.com/chrischall/tock-mcp/compare/v0.5.2...v0.5.3) (2026-09-14)
 
 
