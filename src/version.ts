@@ -2,4 +2,4 @@
 // literal on the line below (registered in release-please-config.json
 // extra-files); every other manifest is a JSON extra-file. Import VERSION
 // wherever the version is needed rather than re-declaring it.
-export const VERSION = '0.5.4'; // x-release-please-version
+export const VERSION = '1.0.0'; // x-release-please-version

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/chrischall/tock-mcp/compare/v0.5.4...v1.0.0) (2026-09-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* **mcp:** migrate server to SDK v2 ([#117](https://github.com/chrischall/tock-mcp/issues/117))
+
+### Features
+
+* **mcp:** migrate server to SDK v2 ([#117](https://github.com/chrischall/tock-mcp/issues/117)) ([5666ae3](https://github.com/chrischall/tock-mcp/commit/5666ae37542f9a9b4b022c0b5f1c4172c79750ad))
+
 ## [0.5.4](https://github.com/chrischall/tock-mcp/compare/v0.5.3...v0.5.4) (2026-09-15)
 
 
