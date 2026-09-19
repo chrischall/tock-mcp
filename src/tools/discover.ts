@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { NonEmptyString, minifiedResult } from '@chrischall/mcp-utils';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { TockClient } from '../client.js';
 import { parseMetros, parseListings } from '../parse.js';
 
@@ -14,7 +14,7 @@ export function registerDiscoverTools(
       description:
         'List Tock cities/metros (name, slug, business count, country/state). Use a metro slug with tock_search_restaurants. By default only metros with bookable venues are returned.',
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {
+      inputSchema: z.object({
         query: z
           .string()
           .optional()
@@ -34,7 +34,7 @@ export function registerDiscoverTools(
           .max(500)
           .optional()
           .describe('Max metros to return (default 100).'),
-      },
+      }),
     },
     async (input) => {
       const app = await client.fetchSlice('/city', 'app');
@@ -63,7 +63,7 @@ export function registerDiscoverTools(
       description:
         'List / search restaurants in a Tock metro. Pass a metro slug (from tock_list_metros, e.g. "chicago") and an optional text query. Returns venues with cuisine, price band, neighborhood, and their Tock slug (use it with tock_get_restaurant / tock_get_availability). Does NOT include bookable slots.',
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {
+      inputSchema: z.object({
         metro: NonEmptyString.describe('Metro slug, e.g. "chicago" or "new-york".'),
         query: z
           .string()
@@ -76,7 +76,7 @@ export function registerDiscoverTools(
           .max(200)
           .optional()
           .describe('Max venues to return (default 50).'),
-      },
+      }),
     },
     async (input) => {
       const qs = input.query

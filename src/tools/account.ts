@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { McpToolError, SessionNotAuthenticatedError, minifiedResult } from '@chrischall/mcp-utils';
 import { viewArg, viewResponse } from '../view.js';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import type { TockClient } from '../client.js';
 import { parseReservations, parseAccountIdentity } from '../parse.js';
 import {
@@ -64,14 +64,14 @@ export function registerAccountTools(
       description:
         "List the signed-in user's Tock reservations (upcoming, past, or canceled) with venue, date/time, party size, and experience. Requires a browser tab signed in to exploretock.com via the fetchproxy extension.",
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {
+      inputSchema: z.object({
         status: z
           .enum(['upcoming', 'past', 'canceled'])
           .optional()
           .describe('Which reservations to list (default upcoming).'),
         limit: z.number().int().positive().max(100).optional().describe('Max to return (default 30).'),
         offset: z.number().int().nonnegative().optional().describe('Pagination offset (default 0).'),
-      },
+      }),
     },
     async (input) => {
       const selection = STATUS_TO_SELECTION[input.status ?? 'upcoming'];
@@ -96,8 +96,8 @@ export function registerAccountTools(
       description:
         "Get the signed-in user's Tock account identity (name, email). Requires a browser tab signed in to exploretock.com via the fetchproxy extension. Derived from your reservation records, so it needs at least one reservation on the account.",
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {
-        view: viewArg(),},
+      inputSchema: z.object({
+        view: viewArg(),}),
     },
     async ({ view }) => {
       // Tock exposes no standalone profile query; ownerPatron rides on each
@@ -127,7 +127,7 @@ export function registerAccountTools(
       description:
         "Verify that a Tock reservation actually exists, by re-querying the account's own reservation lists (upcoming, canceled and past) and returning an explicit verdict. Use this after ANY booking attempt — a success screen or screenshot is not proof that a booking landed. Returns verdict `confirmed`, `cancelled` (it existed and was voided) or `not_found`. A `not_found` must be reported to the user as \"attempted, unverified\", never as a failure to book and never as a success. Requires a browser tab signed in to exploretock.com via the fetchproxy extension.",
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {
+      inputSchema: z.object({
         venue: z
           .string()
           .min(1)
@@ -150,7 +150,7 @@ export function registerAccountTools(
             'Minutes since the booking was attempted. Drives the lag caveat: an absence seen within ' +
               'a few minutes of booking is inconclusive, not proof. Omit if unknown (treated as inconclusive).'
           ),
-      },
+      }),
     },
     async (input) => {
       // Read every list: an upcoming booking proves success, a canceled one

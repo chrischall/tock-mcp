@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { McpToolError, NonEmptyString, UpstreamHttpError, minifiedResult } from '@chrischall/mcp-utils';
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { type TockClient } from '../client.js';
 import { viewArg, viewResponse } from '../view.js';
 import { parseRestaurant, parseAvailability } from '../parse.js';
@@ -27,10 +27,10 @@ export function registerRestaurantTools(
       description:
         'Get details for a Tock venue by slug: name, cuisine, price band, location, description, and its bookable experiences (with prices and party sizes). Slug comes from tock_search_restaurants (or a exploretock.com/{slug} URL).',
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {
+      inputSchema: z.object({
         view: viewArg(),
         slug: VenueSlug,
-      },
+      }),
     },
     // `view` is destructured OFF before anything else touches the input. It is
     // a RESPONSE-shape argument and Tock has never heard of it; two sibling
@@ -61,7 +61,7 @@ export function registerRestaurantTools(
       description:
         "Get a venue's bookable calendar: each experience (seating/menu) with its price, party sizes, cancellation policy, plus the dates and times the venue is open. Tock returns the full open-date/time set; pass a date to focus the summary. Reservations are prepaid tickets — this MCP does not book; open the venue on exploretock.com to reserve.",
       annotations: { readOnlyHint: true, openWorldHint: true },
-      inputSchema: {
+      inputSchema: z.object({
         slug: VenueSlug,
         date: DateSchema.describe('YYYY-MM-DD to center the calendar on (optional).'),
         party_size: z
@@ -71,7 +71,7 @@ export function registerRestaurantTools(
           .max(50)
           .optional()
           .describe('Guests — filters experiences to those accepting this size.'),
-      },
+      }),
     },
     async (input) => {
       const path = input.date
