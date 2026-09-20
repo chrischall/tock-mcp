@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/chrischall/tock-mcp/compare/v1.0.0...v1.1.0) (2026-09-19)
+
+
+### Features
+
+* **deps:** take mcp-utils 1.0.0, fixing server/discover ([#121](https://github.com/chrischall/tock-mcp/issues/121)) ([b6c7c8d](https://github.com/chrischall/tock-mcp/commit/b6c7c8dde56c57a390c813d748d5f689101353a9))
+
 ## [1.0.0](https://github.com/chrischall/tock-mcp/compare/v0.5.4...v1.0.0) (2026-09-19)
 
 
