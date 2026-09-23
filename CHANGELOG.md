@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/chrischall/tock-mcp/compare/v1.1.0...v1.1.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* **deps:** require zod ^4.6.5 to match @chrischall/mcp-utils 2.4.0 ([#125](https://github.com/chrischall/tock-mcp/issues/125)) ([0c5681c](https://github.com/chrischall/tock-mcp/commit/0c5681c09479785094def459762fd10694f4431a))
+* **deps:** upgrade @chrischall/mcp-utils to 2.4.0 and @fetchproxy/* to 3.2.0 ([#123](https://github.com/chrischall/tock-mcp/issues/123)) ([3b8ab33](https://github.com/chrischall/tock-mcp/commit/3b8ab33be95d264093b73382904792d7bff7e853))
+
 ## [1.1.0](https://github.com/chrischall/tock-mcp/compare/v1.0.0...v1.1.0) (2026-09-19)
 
 
