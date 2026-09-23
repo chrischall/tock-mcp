@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TockClient, SessionNotAuthenticatedError } from '../src/client.js';
+import { TockClient, SessionNotAuthenticatedError, isGraphqlQuery } from '../src/client.js';
 import { McpToolError, UpstreamHttpError } from '@chrischall/mcp-utils';
 import type { FetchInit, FetchResult, TockTransport } from '../src/transport.js';
 
@@ -107,6 +107,20 @@ describe('TockClient.graphql', () => {
     });
   });
 
+  it('marks a GraphQL query retry-safe on transport timeout (retryOnTimeout)', async () => {
+    const t = new StubTransport(ok(JSON.stringify({ data: {} })));
+    const client = new TockClient({ transport: t });
+    await client.graphql('PatronReservationHistory', '\n    query PatronReservationHistory { purchases { id } }');
+    expect(t.lastInit?.retryOnTimeout).toBe(true);
+  });
+
+  it('never marks a GraphQL mutation retry-safe (a re-send could double-book)', async () => {
+    const t = new StubTransport(ok(JSON.stringify({ data: {} })));
+    const client = new TockClient({ transport: t });
+    await client.graphql('BookIt', 'mutation BookIt { book { id } }');
+    expect(t.lastInit?.retryOnTimeout).toBeUndefined();
+  });
+
   it('maps a 401 to SessionNotAuthenticatedError', async () => {
     const client = new TockClient({
       transport: new StubTransport({ status: 401, body: '', url: 'x' }),
@@ -130,5 +144,21 @@ describe('TockClient.graphql', () => {
       transport: new StubTransport(ok(JSON.stringify({ errors: [{ message: 'bad variable' }] }))),
     });
     await expect(client.graphql('X', 'query {...}')).rejects.toBeInstanceOf(McpToolError);
+  });
+});
+
+describe('isGraphqlQuery', () => {
+  it('accepts named and anonymous queries', () => {
+    expect(isGraphqlQuery('\n  query A($x: Int!) { a }\n fragment F on T { id }')).toBe(true);
+    expect(isGraphqlQuery('# comment\n{ a }')).toBe(true);
+  });
+  it('rejects mutations, subscriptions and mixed documents', () => {
+    expect(isGraphqlQuery('mutation M { m }')).toBe(false);
+    expect(isGraphqlQuery('subscription S { s }')).toBe(false);
+    expect(isGraphqlQuery('query Q { q }\nmutation M { m }')).toBe(false);
+  });
+  it('accepts the real PatronReservationHistory document', async () => {
+    const { PATRON_RESERVATION_HISTORY } = await import('../src/graphql-ops.js');
+    expect(isGraphqlQuery(PATRON_RESERVATION_HISTORY)).toBe(true);
   });
 });

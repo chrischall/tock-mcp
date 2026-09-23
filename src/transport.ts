@@ -16,6 +16,11 @@ export interface FetchInit {
   headers?: Record<string, string>;
   /** Serialized request body. Omitted for GETs. */
   body?: string;
+  /** Re-send once after a transport timeout (the MV3 service-worker
+   *  cold-start retry). fetchproxy only retries GET/HEAD/OPTIONS by default,
+   *  because a timed-out write may already have run. Set `true` ONLY for a
+   *  read that happens to use POST (e.g. a GraphQL query) — never a write. */
+  retryOnTimeout?: boolean;
 }
 
 export interface FetchResult {

@@ -96,6 +96,10 @@ export class TockClient {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ operationName, variables, query }),
+      // A GraphQL query is a read over POST: safe to re-send after a bridge
+      // timeout. Anything else (a mutation) must never be retried — the
+      // first attempt may already have run.
+      ...(isGraphqlQuery(query) && { retryOnTimeout: true }),
     });
     this.throwIfChallenge(result);
     this.throwIfSignInPage(result);
@@ -174,4 +178,13 @@ export class TockClient {
       throw new SessionNotAuthenticatedError('Tock', 'exploretock.com');
     }
   }
+}
+
+/** True when a GraphQL document is provably read-only: its first operation is
+ *  a `query` (or the anonymous `{ ... }` shorthand) and it declares no
+ *  `mutation`/`subscription` operation anywhere. Errs towards false. */
+export function isGraphqlQuery(document: string): boolean {
+  const stripped = document.replace(/#[^\n]*/g, '').trimStart();
+  if (/(^|[\s}])(mutation|subscription)\b/.test(stripped)) return false;
+  return stripped.startsWith('{') || /^query\b/.test(stripped);
 }
