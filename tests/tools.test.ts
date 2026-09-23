@@ -461,6 +461,39 @@ describe('tock_verify_reservation', () => {
     await h.close();
   });
 
+  // chrischall/tock-mcp#127: a cancelled match is only the answer if no live
+  // rebooking could be hiding in an unread tail of a truncated list.
+  it('flags a cancelled match as inconclusive when a list was too long to read in full', async () => {
+    const endless = (v: Record<string, unknown>) => ({ purchases: filler(v.limit as number) });
+    const h = await verifyHarness({
+      ...allSelections([], [{ ...soul, cancelledOrRefunded: true }]),
+      'PatronReservationHistory::UPCOMING': endless,
+    });
+    const res = parseToolResult<{ verdict: string; recheckAdvised: boolean; truncated: boolean; summary: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('cancelled');
+    expect(res.truncated).toBe(true);
+    expect(res.recheckAdvised).toBe(true);
+    expect(res.summary).toMatch(/inconclusive|not read in full/i);
+    await h.close();
+  });
+
+  it('keeps a live match conclusive even when a list was truncated', async () => {
+    const endless = (v: Record<string, unknown>) => ({ purchases: filler(v.limit as number) });
+    const h = await verifyHarness({
+      ...allSelections([soul]),
+      'PatronReservationHistory::PAST': endless,
+    });
+    const res = parseToolResult<{ verdict: string; recheckAdvised: boolean; truncated: boolean }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('confirmed');
+    expect(res.truncated).toBe(true);
+    expect(res.recheckAdvised).toBe(false);
+    await h.close();
+  });
+
   it('surfaces the sign-in error rather than reporting a false not_found', async () => {
     // A signed-out session must never look like "the booking does not exist".
     const h = await createTestHarness((s) =>

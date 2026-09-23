@@ -218,15 +218,29 @@ export function registerAccountTools(
 
       if (match) {
         const cancelled = match.cancelledOrRefunded === true;
+        // A live match is conclusive. A cancelled one is only the answer if
+        // every list was read in full: a live rebooking for the same date
+        // could sit in the unread tail of a truncated list.
+        const cancelledButTruncated = cancelled && truncated;
         return minifiedResult({
           verdict: cancelled ? 'cancelled' : 'confirmed',
           match,
           searched,
-          recheckAdvised: false,
-          reportAs: cancelled
+          truncated,
+          recheckAdvised: cancelledButTruncated,
+          reportAs: cancelledButTruncated
+            ? 'attempted, unverified'
+            : cancelled
             ? 'The reservation exists but is cancelled or refunded — it will not be honoured.'
             : 'Confirmed: the reservation is present in the account.',
-          summary: cancelled
+          summary: cancelledButTruncated
+            ? `Found a cancelled or refunded ${input.date} reservation at ${match.venue ?? input.venue}, ` +
+              `but this is inconclusive: at least one list is longer than ` +
+              `${VERIFY_PAGE_SIZE * VERIFY_MAX_PAGES} records and was not read in full ` +
+              `(${searched.upcoming}/${searched.canceled}/${searched.past} checked), so a live rebooking ` +
+              `for the same date could be hiding in the unread part. Check the Reservations tab on ` +
+              `exploretock.com. Report as "attempted, unverified" — not as booked, and not as cancelled.`
+            : cancelled
             ? `Found a ${input.date} reservation at ${match.venue ?? input.venue}, but it is cancelled or refunded.`
             : `Confirmed: ${match.venue ?? input.venue} on ${input.date}${
                 match.partySize ? ` for ${match.partySize}` : ''
