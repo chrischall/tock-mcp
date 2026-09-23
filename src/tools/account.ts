@@ -41,17 +41,58 @@ function matchesDate(r: { dateTime?: string }, date: string): boolean {
   return typeof r.dateTime === 'string' && r.dateTime.slice(0, 10) === date;
 }
 
+/**
+ * Fetch one page of the patron's purchases. The payload shape is checked here:
+ * a null `data`, a renamed field or a changed wrapper must fail loudly, never
+ * read as "no reservations" — tock_verify_reservation would otherwise turn a
+ * schema drift into a confident "never booked" (chrischall/fleet-audit#265).
+ */
 async function fetchPurchases(
   client: TockClient,
   selection: ReservationSelection,
   offset: number,
   limit: number
-): Promise<unknown> {
-  return client.graphql('PatronReservationHistory', PATRON_RESERVATION_HISTORY, {
+): Promise<{ purchases: unknown[] }> {
+  const data = await client.graphql('PatronReservationHistory', PATRON_RESERVATION_HISTORY, {
     offset,
     limit,
     selection,
   });
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !Array.isArray((data as { purchases?: unknown }).purchases)
+  ) {
+    throw new McpToolError(
+      `Tock PatronReservationHistory (${selection}) returned an unexpected payload with no purchases list.`,
+      {
+        hint: 'Tock may have changed its reservations API. Check the Reservations tab on exploretock.com directly; do not treat this as "no reservations".',
+      }
+    );
+  }
+  return data as { purchases: unknown[] };
+}
+
+// tock_verify_reservation pages each list until a short page, up to this many
+// pages; a list longer than that is reported as truncated, and an absence in
+// it is inconclusive (chrischall/fleet-audit#266).
+const VERIFY_PAGE_SIZE = 50;
+const VERIFY_MAX_PAGES = 10;
+
+/** Read every page of one selection, up to VERIFY_MAX_PAGES. */
+async function fetchAllReservations(
+  client: TockClient,
+  selection: ReservationSelection
+): Promise<{ reservations: ReturnType<typeof parseReservations>; truncated: boolean }> {
+  const reservations: ReturnType<typeof parseReservations> = [];
+  for (let page = 0; page < VERIFY_MAX_PAGES; page++) {
+    const batch = parseReservations(
+      await fetchPurchases(client, selection, page * VERIFY_PAGE_SIZE, VERIFY_PAGE_SIZE)
+    );
+    reservations.push(...batch);
+    if (batch.length < VERIFY_PAGE_SIZE) return { reservations, truncated: false };
+  }
+  return { reservations, truncated: true };
 }
 
 export function registerAccountTools(
@@ -158,9 +199,10 @@ export function registerAccountTools(
       // real booking. Checking only `upcoming` would misreport two of three.
       const selections: ReservationSelection[] = ['UPCOMING', 'CANCELED', 'PAST'];
       const lists = await Promise.all(
-        selections.map(async (selection) => parseReservations(await fetchPurchases(client, selection, 0, 50)))
+        selections.map((selection) => fetchAllReservations(client, selection))
       );
-      const [upcoming, canceled, past] = lists;
+      const [upcoming, canceled, past] = lists.map((l) => l.reservations);
+      const truncated = lists.some((l) => l.truncated);
       const searched = { upcoming: upcoming.length, canceled: canceled.length, past: past.length };
 
       const candidates = [...upcoming, ...canceled, ...past].filter(
@@ -196,16 +238,31 @@ export function registerAccountTools(
       // the booking was attempted — see LAG_WINDOW_MINUTES.
       const tooSoon =
         input.bookedMinutesAgo === undefined || input.bookedMinutesAgo < LAG_WINDOW_MINUTES;
+      // An account with nothing in any list is not proof either: the wrong
+      // account may be signed in, or the history did not load.
+      const allEmpty = upcoming.length + canceled.length + past.length === 0;
       return minifiedResult({
         verdict: 'not_found',
         match: null,
         searched,
-        recheckAdvised: tooSoon,
+        truncated,
+        recheckAdvised: tooSoon || allEmpty || truncated,
         reportAs: 'attempted, unverified',
         summary: tooSoon
           ? `No matching reservation yet, but this is inconclusive: the reservations backend lags by ` +
             `minutes, so re-check in ~2 minutes before drawing any conclusion. Report as "attempted, ` +
             `unverified" — not as booked, and not yet as failed.`
+          : truncated
+          ? `No matching reservation in the first ${VERIFY_PAGE_SIZE * VERIFY_MAX_PAGES} records of each ` +
+            `list, but this is inconclusive: at least one list is longer than that and was not read in ` +
+            `full (${searched.upcoming}/${searched.canceled}/${searched.past} checked). Check the ` +
+            `Reservations tab on exploretock.com. Report as "attempted, unverified" — not as booked, and ` +
+            `not as failed.`
+          : allEmpty
+          ? `No matching reservation, but this is inconclusive: the account's upcoming, canceled and past ` +
+            `lists are all empty, which suggests the wrong account is signed in or the history did not ` +
+            `load. Check the Reservations tab on exploretock.com and re-check. Report as "attempted, ` +
+            `unverified" — not as booked, and not as failed.`
           : `No record of a ${input.date} reservation at "${input.venue}" in the account's upcoming, ` +
             `canceled or past lists (${searched.upcoming}/${searched.canceled}/${searched.past} checked), ` +
             `${input.bookedMinutesAgo} minutes after booking — past the backend lag window. Report as ` +
