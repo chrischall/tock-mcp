@@ -12,7 +12,10 @@ export interface StubResponses {
   html?: Record<string, string>;
   /** throw this error for a given "path::key" or path instead of returning. */
   errors?: Record<string, Error>;
-  /** GraphQL responses keyed by "<operationName>" or "<op>::<selection>". */
+  /**
+   * GraphQL responses keyed by "<operationName>" or "<op>::<selection>". A
+   * function value is called with the request variables (e.g. for paging).
+   */
   graphql?: Record<string, unknown>;
   /** throw for a graphql key instead of returning. */
   graphqlErrors?: Record<string, Error>;
@@ -56,8 +59,9 @@ export function stubClient(responses: StubResponses): TockClient {
       const keyed = sel ? `${operationName}::${sel}` : operationName;
       if (graphqlErrors[keyed]) throw graphqlErrors[keyed];
       if (graphqlErrors[operationName]) throw graphqlErrors[operationName];
-      if (keyed in graphql) return graphql[keyed];
-      if (operationName in graphql) return graphql[operationName];
+      const hit = keyed in graphql ? graphql[keyed] : operationName in graphql ? graphql[operationName] : undefined;
+      if (typeof hit === 'function') return (hit as (v: Record<string, unknown>) => unknown)(variables);
+      if (keyed in graphql || operationName in graphql) return hit;
       throw new Error(`stub: no graphql for ${keyed}`);
     },
   };

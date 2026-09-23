@@ -413,6 +413,54 @@ describe('tock_verify_reservation', () => {
     await h.close();
   });
 
+  // chrischall/fleet-audit#266: the lists are paged. A booking past the first
+  // page must still be found, and a list too long to read in full must not
+  // yield a confident not_found.
+  function paged(items: unknown[]) {
+    return (v: Record<string, unknown>) => ({
+      purchases: items.slice(v.offset as number, (v.offset as number) + (v.limit as number)),
+    });
+  }
+  const filler = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      ...soul,
+      id: 1000 + i,
+      business: { name: `Other ${i}`, domainName: `other-${i}` },
+      ticketDateTime: '2025-01-01T19:00:00',
+    }));
+
+  it('pages past the first page of a list to find the booking', async () => {
+    const h = await verifyHarness({
+      ...allSelections([]),
+      'PatronReservationHistory::PAST': paged([...filler(120), soul]),
+    });
+    const res = parseToolResult<{ verdict: string; searched: Record<string, number> }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('confirmed');
+    expect(res.searched.past).toBe(121);
+    await h.close();
+  });
+
+  it('flags not_found as inconclusive when a list was too long to read in full', async () => {
+    let calls = 0;
+    const endless = (v: Record<string, unknown>) => {
+      calls++;
+      return { purchases: filler(v.limit as number) };
+    };
+    const h = await verifyHarness({ ...allSelections([]), 'PatronReservationHistory::PAST': endless });
+    const res = parseToolResult<{ verdict: string; recheckAdvised: boolean; truncated: boolean; summary: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('not_found');
+    expect(res.truncated).toBe(true);
+    expect(res.recheckAdvised).toBe(true);
+    expect(res.summary).toMatch(/inconclusive/i);
+    expect(res.summary).not.toMatch(/most likely never completed/i);
+    expect(calls).toBeLessThanOrEqual(20); // paging is capped
+    await h.close();
+  });
+
   it('surfaces the sign-in error rather than reporting a false not_found', async () => {
     // A signed-out session must never look like "the booking does not exist".
     const h = await createTestHarness((s) =>
