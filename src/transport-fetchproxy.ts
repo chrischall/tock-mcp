@@ -63,6 +63,7 @@ export class FetchproxyTransport implements TockTransport {
       subdomain: 'www',
       headers: init.headers,
       body: init.body,
+      ...(init.retryOnTimeout !== undefined && { retryOnTimeout: init.retryOnTimeout }),
     });
     return { status: response.status, body: response.body, url: response.url };
   }
