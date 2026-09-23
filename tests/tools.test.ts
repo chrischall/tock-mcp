@@ -374,12 +374,42 @@ describe('tock_verify_reservation', () => {
   });
 
   it('stops advising a re-check once the lag window has passed', async () => {
-    const h = await verifyHarness(allSelections([]));
+    // Other reservations load fine; only the target is absent.
+    const other = { ...soul, business: { name: 'Kindred', domainName: 'kindred' } };
+    const h = await verifyHarness(allSelections([other]));
     const res = parseToolResult<{ recheckAdvised: boolean; summary: string }>(
       await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 30 })
     );
     expect(res.recheckAdvised).toBe(false);
     expect(res.summary).toMatch(/no record/i);
+    await h.close();
+  });
+
+  // chrischall/fleet-audit#265: an empty history past the lag window is not
+  // proof — the wrong account may be signed in, or the history failed to load.
+  it('keeps not_found inconclusive when every list is empty, even past the lag window', async () => {
+    const h = await verifyHarness(allSelections([], [], []));
+    const res = parseToolResult<{ verdict: string; recheckAdvised: boolean; summary: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('not_found');
+    expect(res.recheckAdvised).toBe(true);
+    expect(res.summary).toMatch(/inconclusive/i);
+    expect(res.summary).not.toMatch(/most likely never completed/i);
+    await h.close();
+  });
+
+  // chrischall/fleet-audit#265: a schema drift (renamed field, null data) must
+  // fail loudly, never read as "no reservations" and so as "never booked".
+  it.each([
+    ['null data', null],
+    ['a payload with no purchases field', {}],
+    ['a non-array purchases field', { purchases: null }],
+  ])('errors instead of reporting not_found on %s', async (_label, payload) => {
+    const h = await verifyHarness({ ...allSelections([]), 'PatronReservationHistory::UPCOMING': payload });
+    const res = await h.callTool('tock_verify_reservation', { venue: 'Soul', date: '2026-07-31', bookedMinutesAgo: 60 });
+    expect(res.isError).toBeTruthy();
+    expect(JSON.stringify(res.content)).toMatch(/unexpected/i);
     await h.close();
   });
 
@@ -425,6 +455,16 @@ describe('account tools (GraphQL)', () => {
       await h.callTool('tock_list_reservations', { status: 'past' })
     );
     expect(res.count).toBe(0);
+    await h.close();
+  });
+
+  it('tock_list_reservations errors on an unrecognised payload instead of listing nothing', async () => {
+    const h = await createTestHarness((s) =>
+      registerAccountTools(s, stubClient({ graphql: { 'PatronReservationHistory::UPCOMING': { reservations: [] } } }))
+    );
+    const res = await h.callTool('tock_list_reservations', {});
+    expect(res.isError).toBeTruthy();
+    expect(JSON.stringify(res.content)).toMatch(/unexpected/i);
     await h.close();
   });
 

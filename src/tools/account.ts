@@ -41,17 +41,36 @@ function matchesDate(r: { dateTime?: string }, date: string): boolean {
   return typeof r.dateTime === 'string' && r.dateTime.slice(0, 10) === date;
 }
 
+/**
+ * Fetch one page of the patron's purchases. The payload shape is checked here:
+ * a null `data`, a renamed field or a changed wrapper must fail loudly, never
+ * read as "no reservations" — tock_verify_reservation would otherwise turn a
+ * schema drift into a confident "never booked" (chrischall/fleet-audit#265).
+ */
 async function fetchPurchases(
   client: TockClient,
   selection: ReservationSelection,
   offset: number,
   limit: number
-): Promise<unknown> {
-  return client.graphql('PatronReservationHistory', PATRON_RESERVATION_HISTORY, {
+): Promise<{ purchases: unknown[] }> {
+  const data = await client.graphql('PatronReservationHistory', PATRON_RESERVATION_HISTORY, {
     offset,
     limit,
     selection,
   });
+  if (
+    typeof data !== 'object' ||
+    data === null ||
+    !Array.isArray((data as { purchases?: unknown }).purchases)
+  ) {
+    throw new McpToolError(
+      `Tock PatronReservationHistory (${selection}) returned an unexpected payload with no purchases list.`,
+      {
+        hint: 'Tock may have changed its reservations API. Check the Reservations tab on exploretock.com directly; do not treat this as "no reservations".',
+      }
+    );
+  }
+  return data as { purchases: unknown[] };
 }
 
 export function registerAccountTools(
@@ -196,16 +215,24 @@ export function registerAccountTools(
       // the booking was attempted — see LAG_WINDOW_MINUTES.
       const tooSoon =
         input.bookedMinutesAgo === undefined || input.bookedMinutesAgo < LAG_WINDOW_MINUTES;
+      // An account with nothing in any list is not proof either: the wrong
+      // account may be signed in, or the history did not load.
+      const allEmpty = upcoming.length + canceled.length + past.length === 0;
       return minifiedResult({
         verdict: 'not_found',
         match: null,
         searched,
-        recheckAdvised: tooSoon,
+        recheckAdvised: tooSoon || allEmpty,
         reportAs: 'attempted, unverified',
         summary: tooSoon
           ? `No matching reservation yet, but this is inconclusive: the reservations backend lags by ` +
             `minutes, so re-check in ~2 minutes before drawing any conclusion. Report as "attempted, ` +
             `unverified" — not as booked, and not yet as failed.`
+          : allEmpty
+          ? `No matching reservation, but this is inconclusive: the account's upcoming, canceled and past ` +
+            `lists are all empty, which suggests the wrong account is signed in or the history did not ` +
+            `load. Check the Reservations tab on exploretock.com and re-check. Report as "attempted, ` +
+            `unverified" — not as booked, and not as failed.`
           : `No record of a ${input.date} reservation at "${input.venue}" in the account's upcoming, ` +
             `canceled or past lists (${searched.upcoming}/${searched.canceled}/${searched.past} checked), ` +
             `${input.bookedMinutesAgo} minutes after booking — past the backend lag window. Report as ` +
