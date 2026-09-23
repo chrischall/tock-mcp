@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/chrischall/tock-mcp/compare/v1.1.1...v1.1.2) (2026-09-23)
+
+
+### Bug Fixes
+
+* **verify:** flag a cancelled tock_verify_reservation match as inconclusive when a list was truncated ([#129](https://github.com/chrischall/tock-mcp/issues/129)) ([ad4b6c3](https://github.com/chrischall/tock-mcp/commit/ad4b6c35e33d8cb1bf2729c59d2181a74bfac42d)), closes [#127](https://github.com/chrischall/tock-mcp/issues/127)
+* **verify:** stop tock_verify_reservation reporting false not_found on schema drift, empty history, or long lists ([#126](https://github.com/chrischall/tock-mcp/issues/126)) ([f312e0d](https://github.com/chrischall/tock-mcp/commit/f312e0db6a4e769f9d34494a0ac2493157b79683))
+
 ## [1.1.1](https://github.com/chrischall/tock-mcp/compare/v1.1.0...v1.1.1) (2026-09-23)
 
 
