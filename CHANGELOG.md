@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.3](https://github.com/chrischall/tock-mcp/compare/v1.1.2...v1.1.3) (2026-09-24)
+
+
+### Bug Fixes
+
+* **deps:** bump @chrischall/mcp-utils to ^2.6.0 ([#134](https://github.com/chrischall/tock-mcp/issues/134)) ([79331d9](https://github.com/chrischall/tock-mcp/commit/79331d945a61b22b2665a1c307e3e256f27f95ab))
+* **deps:** Bump dotenv in the production-majors group ([#132](https://github.com/chrischall/tock-mcp/issues/132)) ([d8e08d5](https://github.com/chrischall/tock-mcp/commit/d8e08d57150000e9a86bf8d20ce3f3926a82c714))
+
 ## [1.1.2](https://github.com/chrischall/tock-mcp/compare/v1.1.1...v1.1.2) (2026-09-23)
 
 
