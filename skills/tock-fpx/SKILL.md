@@ -36,10 +36,10 @@ fpx pair -p tock                             # prints a pair code → approve in
 
 Requirements: the **ContextMint Bridge** browser extension installed (from
 https://github.com/nullnet-app/contextmint-bridge/releases — Chrome: load the chrome zip
-unpacked; Safari: ships inside the ContextMint app), with an open
+unpacked; Safari isn't available yet, so use Chrome for now), with an open
 `www.exploretock.com` tab (signed in, for the reservations tool only), and its
 Chrome **Site access** allowing `exploretock.com`. Pairing persists — after the
-first approval every later `fpx` call reuses it.
+first approval every later `fpx` call reuses it. ContextMint Bridge is the fetchproxy extension under its new name, same maintainer; its source is public at https://github.com/nullnet-app/contextmint-bridge — build it yourself or check a release zip against its published `.sha256` file.
 
 ## Two call shapes
 
