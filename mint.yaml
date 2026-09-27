@@ -4,8 +4,8 @@ slug: tock
 summary: >-
   Tock (exploretock.com) restaurant discovery for Claude — list cities,
   search a metro, get venue details and their bookable experiences, prices,
-  and open dates/times. Relays every request through the fetchproxy browser
-  extension (github.com/chrischall/fetchproxy) running in your signed-in
+  and open dates/times. Relays every request through the ContextMint Bridge
+  browser extension (github.com/nullnet-app/contextmint-bridge) running in your signed-in
   exploretock.com tab, so there's no cookie paste or bot-wall dance.
 #
 # Hosting note (a comment, not user-facing summary text): this is a

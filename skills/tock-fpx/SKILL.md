@@ -16,7 +16,7 @@ description: >-
 `curl`/Node request 403s every path (`cf-mitigated: challenge`, a "Just a
 moment..." interstitial), including `/city` and `/{slug}`. There is no
 server-side login form and no consumer token exchange. `fpx` routes the
-request through the user's own signed-in browser tab (the Transporter
+request through the user's own signed-in browser tab (the ContextMint Bridge
 extension), which has already cleared the challenge, so the same fetch
 succeeds. Browsing (metros, search, venue detail, availability) needs no Tock
 login at all — just an open, challenge-cleared tab; only the reservations
@@ -31,10 +31,12 @@ booking/cancel" below.
 ```sh
 npm install -g @fetchproxy/cli              # provides `fpx`
 fpx profile add tock --domain exploretock.com
-fpx pair -p tock                             # prints a pair code → approve in Transporter
+fpx pair -p tock                             # prints a pair code → approve in ContextMint Bridge
 ```
 
-Requirements: the **Transporter** browser extension installed, with an open
+Requirements: the **ContextMint Bridge** browser extension installed (from
+https://github.com/nullnet-app/contextmint-bridge/releases — Chrome: load the chrome zip
+unpacked; Safari: ships inside the ContextMint app), with an open
 `www.exploretock.com` tab (signed in, for the reservations tool only), and its
 Chrome **Site access** allowing `exploretock.com`. Pairing persists — after the
 first approval every later `fpx` call reuses it.

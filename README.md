@@ -2,7 +2,7 @@
 
 MCP server for **Tock** ([exploretock.com](https://www.exploretock.com)) — restaurant discovery and availability for Claude. List cities, search a metro, and get a venue's details plus its bookable experiences, prices, party sizes, and open dates/times.
 
-Every request is relayed through your own signed-in browser tab via the [fetchproxy](https://github.com/chrischall/fetchproxy) extension — no cookie paste, no bot-wall dance, no password handling. This project was developed and is maintained by AI (Claude Code).
+Every request is relayed through your own signed-in browser tab via the [ContextMint Bridge](https://github.com/nullnet-app/contextmint-bridge/releases) browser extension — no cookie paste, no bot-wall dance, no password handling. This project was developed and is maintained by AI (Claude Code).
 
 > Tock publishes no official consumer API, and exploretock.com sits behind a Cloudflare challenge. tock-mcp fetches the same server-rendered pages the Tock web app uses (parsing their embedded `window.$REDUX_STATE` store) through your signed-in tab. It is **read-only** — Tock reservations are prepaid tickets, so booking stays on exploretock.com. Use at your own discretion.
 
@@ -17,7 +17,7 @@ Every request is relayed through your own signed-in browser tab via the [fetchpr
 }
 ```
 
-You also need the [fetchproxy browser extension](https://github.com/chrischall/fetchproxy) (shared across the fleet) running in a Chrome/Safari tab. The first tool call prints a one-time pair code to approve in the extension popup — run `tock_healthcheck` to trigger it. Discovery works signed-out; the account tools need you signed in to exploretock.com.
+You also need **ContextMint Bridge** (the browser extension shared by every fetchproxy-based MCP), installed from [its releases page](https://github.com/nullnet-app/contextmint-bridge/releases): in Chrome, unzip the chrome zip and load it unpacked (`chrome://extensions` → Developer mode → Load unpacked); in Safari, it ships inside the ContextMint app. Keep an exploretock.com tab open. The first tool call prints a one-time pair code to approve in the ContextMint Bridge popup — run `tock_healthcheck` to trigger it. Discovery works signed-out; the account tools need you signed in to exploretock.com.
 
 ## Tools
 

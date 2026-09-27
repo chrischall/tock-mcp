@@ -36,7 +36,7 @@ await client.start();
 
 const banner =
   `[tock-mcp] v${VERSION} — WebSocket bridge via @fetchproxy/server on 127.0.0.1:37149. ` +
-  'Install the fetchproxy extension (see https://github.com/chrischall/fetchproxy) ' +
+  'Install ContextMint Bridge (see https://github.com/nullnet-app/contextmint-bridge/releases) ' +
   'and sign in at exploretock.com. First request prints a one-time pair code to ' +
   'approve in the extension. This project was developed and is maintained by AI.';
 

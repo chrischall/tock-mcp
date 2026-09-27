@@ -115,7 +115,7 @@ export class TockClient {
       throw new McpToolError(
         `Tock GraphQL ${operationName} returned a non-JSON response.`,
         {
-          hint: 'Open exploretock.com in the signed-in fetchproxy tab, ensure you are logged in and the Cloudflare check has cleared, then retry.',
+          hint: 'Open exploretock.com in the signed-in ContextMint Bridge tab, ensure you are logged in and the Cloudflare check has cleared, then retry.',
         }
       );
     }
@@ -158,7 +158,7 @@ export class TockClient {
       'Tock served a Cloudflare "Just a moment" challenge instead of the page.',
       {
         hint:
-          'Open exploretock.com in the browser tab the fetchproxy extension is ' +
+          'Open exploretock.com in the browser tab ContextMint Bridge is ' +
           'signed into, let the Cloudflare check clear (and sign in if prompted), ' +
           'then retry.',
       }
