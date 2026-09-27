@@ -1,11 +1,11 @@
 ---
 name: tock-mcp
-description: Discover restaurants on Tock (exploretock.com) via MCP — list cities, search a metro, and get a venue's details plus its bookable experiences, prices, party sizes, and open dates/times. Triggers on phrases like "search Tock for", "what's on Tock in Chicago", "find a Tock reservation at", "does Alinea have availability on Tock", "what experiences does <venue> offer on Tock", or "my Tock reservations". Requires tock-mcp installed and the fetchproxy browser extension running in a signed-in exploretock.com tab.
+description: Discover restaurants on Tock (exploretock.com) via MCP — list cities, search a metro, and get a venue's details plus its bookable experiences, prices, party sizes, and open dates/times. Triggers on phrases like "search Tock for", "what's on Tock in Chicago", "find a Tock reservation at", "does Alinea have availability on Tock", "what experiences does <venue> offer on Tock", or "my Tock reservations". Requires tock-mcp installed and the ContextMint Bridge browser extension running in a signed-in exploretock.com tab.
 ---
 
 # tock-mcp
 
-MCP server for Tock (exploretock.com) — restaurant discovery and availability. Every request is relayed through the user's signed-in browser tab via the [fetchproxy](https://github.com/chrischall/fetchproxy) extension, so there's no cookie paste, no bot-wall dance, and no password handling.
+MCP server for Tock (exploretock.com) — restaurant discovery and availability. Every request is relayed through the user's signed-in browser tab via the [ContextMint Bridge](https://github.com/nullnet-app/contextmint-bridge/releases) browser extension, so there's no cookie paste, no bot-wall dance, and no password handling.
 
 - **npm:** [npmjs.com/package/tock-mcp](https://www.npmjs.com/package/tock-mcp)
 - **Source:** [github.com/chrischall/tock-mcp](https://github.com/chrischall/tock-mcp)
@@ -14,7 +14,7 @@ MCP server for Tock (exploretock.com) — restaurant discovery and availability.
 
 ## Setup
 
-The MCP server is half of the picture — the other half is the [fetchproxy](https://github.com/chrischall/fetchproxy) browser extension that talks to Tock from your signed-in tab. Both are required.
+The MCP server is half of the picture — the other half is the [ContextMint Bridge](https://github.com/nullnet-app/contextmint-bridge/releases) browser extension that talks to Tock from your signed-in tab. Both are required.
 
 ### 1. Install the MCP server
 
@@ -40,13 +40,13 @@ npm install && npm run build
 # then point .mcp.json at dist/bundle.js
 ```
 
-### 2. Install the fetchproxy extension
+### 2. Install ContextMint Bridge
 
-tock-mcp shares a single browser extension with every other fetchproxy-based MCP. Install it once from [github.com/chrischall/fetchproxy](https://github.com/chrischall/fetchproxy), then open **exploretock.com** and sign in (only needed for the account tools; discovery works signed-out).
+tock-mcp shares a single browser extension, ContextMint Bridge, with every other fetchproxy-based MCP. Install it once from [its releases page](https://github.com/nullnet-app/contextmint-bridge/releases) — in Chrome, unzip the chrome zip and load it unpacked (`chrome://extensions` → Developer mode → Load unpacked); in Safari, it ships inside the ContextMint app. Then open **exploretock.com** and sign in (only needed for the account tools; discovery works signed-out).
 
 ### 3. Approve the one-time pair code
 
-The first tool call prints a pair code to approve in the Transporter extension popup (trust-on-first-use, per identity). Run `tock_healthcheck` to trigger it, approve the code, and you're paired for good.
+The first tool call prints a pair code to approve in the ContextMint Bridge popup (trust-on-first-use, per identity). Run `tock_healthcheck` to trigger it, approve the code, and you're paired for good.
 
 ## Tools
 

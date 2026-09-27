@@ -103,7 +103,7 @@ export function registerAccountTools(
     'tock_list_reservations',
     {
       description:
-        "List the signed-in user's Tock reservations (upcoming, past, or canceled) with venue, date/time, party size, and experience. Requires a browser tab signed in to exploretock.com via the fetchproxy extension.",
+        "List the signed-in user's Tock reservations (upcoming, past, or canceled) with venue, date/time, party size, and experience. Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension.",
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: z.object({
         status: z
@@ -135,7 +135,7 @@ export function registerAccountTools(
     'tock_get_profile',
     {
       description:
-        "Get the signed-in user's Tock account identity (name, email). Requires a browser tab signed in to exploretock.com via the fetchproxy extension. Derived from your reservation records, so it needs at least one reservation on the account.",
+        "Get the signed-in user's Tock account identity (name, email). Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension. Derived from your reservation records, so it needs at least one reservation on the account.",
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: z.object({
         view: viewArg(),}),
@@ -166,7 +166,7 @@ export function registerAccountTools(
     'tock_verify_reservation',
     {
       description:
-        "Verify that a Tock reservation actually exists, by re-querying the account's own reservation lists (upcoming, canceled and past) and returning an explicit verdict. Use this after ANY booking attempt — a success screen or screenshot is not proof that a booking landed. Returns verdict `confirmed`, `cancelled` (it existed and was voided) or `not_found`. A `not_found` must be reported to the user as \"attempted, unverified\", never as a failure to book and never as a success. Requires a browser tab signed in to exploretock.com via the fetchproxy extension.",
+        "Verify that a Tock reservation actually exists, by re-querying the account's own reservation lists (upcoming, canceled and past) and returning an explicit verdict. Use this after ANY booking attempt — a success screen or screenshot is not proof that a booking landed. Returns verdict `confirmed`, `cancelled` (it existed and was voided) or `not_found`. A `not_found` must be reported to the user as \"attempted, unverified\", never as a failure to book and never as a success. Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension.",
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: z.object({
         venue: z
