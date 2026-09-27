@@ -42,7 +42,7 @@ npm install && npm run build
 
 ### 2. Install ContextMint Bridge
 
-tock-mcp shares a single browser extension, ContextMint Bridge, with every other fetchproxy-based MCP. Install it once from [its releases page](https://github.com/nullnet-app/contextmint-bridge/releases) — in Chrome, unzip the chrome zip and load it unpacked (`chrome://extensions` → Developer mode → Load unpacked); in Safari, it ships inside the ContextMint app. Then open **exploretock.com** and sign in (only needed for the account tools; discovery works signed-out).
+tock-mcp shares a single browser extension, ContextMint Bridge, with every other fetchproxy-based MCP. Install it once from [its releases page](https://github.com/nullnet-app/contextmint-bridge/releases) — in Chrome, unzip the chrome zip and load it unpacked (`chrome://extensions` → Developer mode → Load unpacked); Safari isn't available yet, so use Chrome for now. ContextMint Bridge is the fetchproxy extension under its new name, same maintainer; its source is public at https://github.com/nullnet-app/contextmint-bridge — build it yourself or check a release zip against its published `.sha256` file. Then open **exploretock.com** and sign in (only needed for the account tools; discovery works signed-out).
 
 ### 3. Approve the one-time pair code
 
