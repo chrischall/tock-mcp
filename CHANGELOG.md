@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.4](https://github.com/chrischall/tock-mcp/compare/v1.1.3...v1.1.4) (2026-09-27)
+
+
+### Bug Fixes
+
+* **deps:** Bump the production-dependencies group with 3 updates ([#136](https://github.com/chrischall/tock-mcp/issues/136)) ([d0d2312](https://github.com/chrischall/tock-mcp/commit/d0d2312042c1b53b2cc2cb20bce9db3c5c2394c7))
+* **deps:** move to [@fetchproxy](https://github.com/fetchproxy) 3.4 for ContextMint Bridge errors, capability subsets and managed pins ([#138](https://github.com/chrischall/tock-mcp/issues/138)) ([fda6be6](https://github.com/chrischall/tock-mcp/commit/fda6be622986fd7494dde178becf417122ccb58f))
+* **deps:** move to @chrischall/mcp-utils 2.8 and [@fetchproxy](https://github.com/fetchproxy) 3.4.1 for clearer browser-bridge errors ([#139](https://github.com/chrischall/tock-mcp/issues/139)) ([eda17b2](https://github.com/chrischall/tock-mcp/commit/eda17b2e2b01879949f6a8500b44f50c637e5cc7))
+
 ## [1.1.3](https://github.com/chrischall/tock-mcp/compare/v1.1.2...v1.1.3) (2026-09-24)
 
 
