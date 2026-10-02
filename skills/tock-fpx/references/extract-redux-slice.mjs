@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Extract one top-level slice of Tock's `window.$REDUX_STATE` store from SSR
-// HTML piped in on stdin. Direct port of tock-mcp's src/redux-state.ts
-// (extractReduxSlice) as a standalone script, for use outside the MCP.
+// HTML piped in on stdin. A dependency-free standalone script for use outside
+// the MCP; the server itself reads slices with `extractJsonKeyAfterMarker`
+// from `@chrischall/mcp-utils/scrape`, which is the reference behaviour.
 //
 // The store is a JS *object literal*, not strict JSON — absent values are the
 // bare identifier `undefined`, so we string/escape-aware locate the requested
