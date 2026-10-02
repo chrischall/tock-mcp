@@ -1,44 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { extractReduxState, extractReduxSlice, ParseError } from '../src/redux-state.js';
+import { extractReduxSlice, ParseError } from '../src/redux-state.js';
 
-describe('extractReduxState', () => {
-  it('extracts a window.$REDUX_STATE assignment', () => {
-    const html = `<html><script>window.$REDUX_STATE = {"app":{"a":1},"n":2};</script></html>`;
-    expect(extractReduxState(html)).toEqual({ app: { a: 1 }, n: 2 });
-  });
-
-  it('handles nested objects and escaped strings/braces in string values', () => {
-    const html = `<script>window.$REDUX_STATE = {"desc":"a \\"quoted\\" } brace","x":{"y":[1,{"z":true}]}};</script>`;
-    expect(extractReduxState(html)).toEqual({
-      desc: 'a "quoted" } brace',
-      x: { y: [1, { z: true }] },
-    });
-  });
-
-  it('stops at the matching close brace, ignoring trailing script', () => {
-    const html = `window.$REDUX_STATE = {"only":1};\nwindow.__ENV__ = {"other":2};`;
-    expect(extractReduxState(html)).toEqual({ only: 1 });
-  });
-
-  it('coerces bare `undefined` value literals to null (Tock serialises absent values that way)', () => {
-    const html = `window.$REDUX_STATE = {"jwtToken":undefined,"n":1,"arr":[undefined,2],"note":"undefined stays a string"};`;
-    expect(extractReduxState(html)).toEqual({
-      jwtToken: null,
-      n: 1,
-      arr: [null, 2],
-      note: 'undefined stays a string',
-    });
-  });
-
-  it('throws ParseError when the marker is absent', () => {
-    expect(() => extractReduxState('<html>no state here</html>')).toThrow(ParseError);
-  });
-
-  it('throws ParseError on unmatched braces', () => {
-    expect(() => extractReduxState('window.$REDUX_STATE = {"a":1')).toThrow(ParseError);
-  });
-});
-
+// The slice reader is a thin Tock wrapper over mcp-utils'
+// extractJsonKeyAfterMarker (fleet-audit#1130); these pin the behaviour the
+// client relies on, against real-shaped stores.
 describe('extractReduxSlice', () => {
   // The real Tock store embeds inline `function` values in the `navigation`
   // slice — illegal JSON that breaks a whole-store parse. Slicing by key must
@@ -67,7 +32,41 @@ describe('extractReduxSlice', () => {
     expect(extractReduxSlice(storeWithFunctions, 'app')).toBeTruthy();
   });
 
+  it('handles escaped quotes and braces inside string values', () => {
+    const html = `<script>window.$REDUX_STATE = {"desc":"a \\"quoted\\" } brace","x":{"y":[1,{"z":true}]}};</script>`;
+    expect(extractReduxSlice(html, 'desc')).toBe('a "quoted" } brace');
+    expect(extractReduxSlice(html, 'x')).toEqual({ y: [1, { z: true }] });
+  });
+
+  it('coerces bare undefined to null but leaves the word inside strings alone', () => {
+    const html = `window.$REDUX_STATE = {"s":{"jwtToken":undefined,"arr":[undefined,2],"note":"undefined stays a string"}};`;
+    expect(extractReduxSlice(html, 's')).toEqual({ jwtToken: null, arr: [null, 2], note: 'undefined stays a string' });
+  });
+
+  it('returns a legitimate null slice (a signed-out patron) rather than treating it as missing', () => {
+    expect(extractReduxSlice('window.$REDUX_STATE = {"patron":null,"app":{}};', 'patron')).toBeNull();
+  });
+
+  it('only matches a top-level key, never a same-named key nested in a sibling', () => {
+    const html = 'window.$REDUX_STATE = {"nav":{"calendar":"decoy"},"calendar":{"real":true}};';
+    expect(extractReduxSlice(html, 'calendar')).toEqual({ real: true });
+  });
+
+  it('tolerates whitespace around the key colon', () => {
+    const html = 'window.$REDUX_STATE = { "calendar" : {"ok":1} };';
+    expect(extractReduxSlice(html, 'calendar')).toEqual({ ok: 1 });
+  });
+
+  it('throws ParseError naming the marker when the store is absent', () => {
+    expect(() => extractReduxSlice('<html>no state here</html>', 'app')).toThrow(/\$REDUX_STATE marker not found/);
+  });
+
   it('throws ParseError when the requested slice is absent', () => {
     expect(() => extractReduxSlice(storeWithFunctions, 'patron')).toThrow(ParseError);
+    expect(() => extractReduxSlice(storeWithFunctions, 'patron')).toThrow(/Slice "patron"/);
+  });
+
+  it('throws ParseError on an unterminated store', () => {
+    expect(() => extractReduxSlice('window.$REDUX_STATE = {"a":{"b":1', 'a')).toThrow(ParseError);
   });
 });

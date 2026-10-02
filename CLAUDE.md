@@ -46,10 +46,12 @@ illegal JSON:
 - the `navigation` slice embeds inline `function` values
 
 So **never parse the whole store.** `extractReduxSlice(html, key)` (in
-`src/redux-state.ts`) walks braces/strings to one named top-level slice, then
-rewrites bare `undefined` → `null` before `JSON.parse`. Slicing by key is what
-sidesteps `navigation`'s functions. `extractReduxState()` (whole-store) is kept
-for fixtures only — it will throw on a real page.
+`src/redux-state.ts`) is a thin wrapper over `@chrischall/mcp-utils/scrape`'s
+`extractJsonKeyAfterMarker(…, { sanitize: true })`: it reads one named
+top-level slice, skipping sibling values as arbitrary JS, and rewrites bare
+`undefined` → `null` before `JSON.parse`. Slicing by key is what sidesteps
+`navigation`'s functions. The wrapper's job is Tock's contract — the marker
+list and a `ParseError` naming what failed.
 
 The slices in use: `app` (metro directory on `/city`; the business record on
 `/{slug}`), `consumerPage` (listings on `/city/{metro}`), `calendar` (offerings
