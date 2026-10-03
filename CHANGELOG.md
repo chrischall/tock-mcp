@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.1.5](https://github.com/chrischall/tock-mcp/compare/v1.1.4...v1.1.5) (2026-10-03)
+
+
+### Bug Fixes
+
+* bump @chrischall/mcp-utils to 2.9.0 ([#140](https://github.com/chrischall/tock-mcp/issues/140)) ([b67d129](https://github.com/chrischall/tock-mcp/commit/b67d1298d5583808936c47fb25397e68257f97f4))
+* **deps:** adopt @chrischall/mcp-utils 2.12.0 extractJsonKeyAfterMarker for $REDUX_STATE slices ([#143](https://github.com/chrischall/tock-mcp/issues/143)) ([ab7d0da](https://github.com/chrischall/tock-mcp/commit/ab7d0dab81210a9a6d5a2e357f91e16d5ed4e2ec))
+* **deps:** bump @chrischall/mcp-utils to 2.13.0 ([#144](https://github.com/chrischall/tock-mcp/issues/144)) ([280da73](https://github.com/chrischall/tock-mcp/commit/280da7314df1e3297e1793fe1391e02077693ae2))
+* keep credentials and report edge_blocked on CDN/WAF blocks (mcp-utils 2.10.0) ([#142](https://github.com/chrischall/tock-mcp/issues/142)) ([815bd08](https://github.com/chrischall/tock-mcp/commit/815bd08893536b2e5cee77a9a40e336ddf4f0fba))
+
 ## [1.1.4](https://github.com/chrischall/tock-mcp/compare/v1.1.3...v1.1.4) (2026-09-27)
 
 
