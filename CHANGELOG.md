@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.6](https://github.com/chrischall/tock-mcp/compare/v1.1.5...v1.1.6) (2026-10-05)
+
+
+### Bug Fixes
+
+* **deps:** Bump the production-dependencies group with 2 updates ([#147](https://github.com/chrischall/tock-mcp/issues/147)) ([3e96af3](https://github.com/chrischall/tock-mcp/commit/3e96af3d6f5fea8583126f0cd3ba919924de0c9a))
+* **deps:** require @chrischall/mcp-utils 2.14.0 and MCP SDK 2.3.0 ([#149](https://github.com/chrischall/tock-mcp/issues/149)) ([4a492c5](https://github.com/chrischall/tock-mcp/commit/4a492c5d223d8d592209907e3fd774fe18f84a29))
+
 ## [1.1.5](https://github.com/chrischall/tock-mcp/compare/v1.1.4...v1.1.5) (2026-10-03)
 
 
