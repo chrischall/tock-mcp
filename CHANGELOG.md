@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.7](https://github.com/chrischall/tock-mcp/compare/v1.1.6...v1.1.7) (2026-10-07)
+
+
+### Bug Fixes
+
+* **deps:** pick up MCP_CONFIRM_ELICITATION opt-out and fetchproxy 3.6 bridge fixes ([#150](https://github.com/chrischall/tock-mcp/issues/150)) ([07d5b1e](https://github.com/chrischall/tock-mcp/commit/07d5b1ebd10a3bf3af05cc05d6ae64c28cabfa90))
+
 ## [1.1.6](https://github.com/chrischall/tock-mcp/compare/v1.1.5...v1.1.6) (2026-10-05)
 
 
