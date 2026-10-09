@@ -58,7 +58,7 @@ The first tool call prints a pair code to approve in the ContextMint Bridge popu
 | `tock_get_availability` | A venue's bookable calendar: experiences, prices, open dates/times. |
 | `tock_list_reservations` | The signed-in user's purchases / reservations (needs a signed-in tab). |
 | `tock_get_profile` | The signed-in user's profile (needs a signed-in tab). |
-| `tock_verify_reservation` | After a booking attempt, re-query the account and return `confirmed` / `cancelled` / `not_found` (needs a signed-in tab). Use this instead of eyeballing a success screen. |
+| `tock_verify_reservation` | After a booking attempt, re-query the account and return `confirmed` / `cancelled` / `not_found` / `ambiguous` (needs a signed-in tab). Use this instead of eyeballing a success screen. |
 | `tock_healthcheck` | Round-trip the bridge; reports status + the pair code on first run. |
 
 ## Response shape (`view`)
@@ -142,7 +142,10 @@ automation), but **verification is this server's job**. A booking counts as
 Use `tock_verify_reservation` rather than reading `tock_list_reservations`
 yourself: it checks the canceled and past lists too (a created-then-voided
 booking appears only in `canceled`), and it applies the lag rule below for you,
-returning `recheckAdvised: true` when an absence is still inconclusive.
+returning `recheckAdvised: true` when an absence is still inconclusive. Pass
+the venue's exact Tock slug when you have it: a partial name that matches more
+than one restaurant on the date returns verdict `ambiguous` (with the
+candidates), never `confirmed` — re-run with the slug.
 
 Anything less — including a screenshot of a success screen — must be reported
 as **"attempted, unverified."** Two Tock-specific traps make the stricter rule

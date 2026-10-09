@@ -28,12 +28,41 @@ const STATUS_TO_SELECTION: Record<string, ReservationSelection> = {
 // the rule written down in #49 only helps if something enforces it.)
 const LAG_WINDOW_MINUTES = 5;
 
-/** Case-insensitive match of a query against a reservation's name or slug. */
-function matchesVenue(r: { venue?: string; venueSlug?: string }, query: string): boolean {
-  const needle = query.toLowerCase().replace(/[^a-z0-9]/g, '');
-  if (!needle) return false;
-  const hay = `${r.venue ?? ''} ${r.venueSlug ?? ''}`.toLowerCase().replace(/[^a-z0-9]/g, '');
-  return hay.includes(needle);
+/**
+ * Fold a venue string for comparison: Unicode-aware (accents folded, letters
+ * and digits of any script kept), so "Café" matches "cafe" and an all-Japanese
+ * name does not strip to '' (fleet-audit#769).
+ */
+function foldVenue(s: string | undefined): string {
+  return (s ?? '')
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+// A substring match on fewer characters than this ("bar", "the") is too
+// generic to identify a venue; only an exact name/slug match counts then.
+const MIN_SUBSTRING_MATCH = 4;
+
+type VenueMatch = 'exact' | 'partial' | null;
+
+/** How a query matches a reservation's venue name or slug. */
+function matchVenue(r: { venue?: string; venueSlug?: string }, query: string): VenueMatch {
+  const needle = foldVenue(query);
+  if (!needle) return null;
+  const name = foldVenue(r.venue);
+  const slug = foldVenue(r.venueSlug);
+  if (needle === name || needle === slug) return 'exact';
+  if (needle.length >= MIN_SUBSTRING_MATCH && (name.includes(needle) || slug.includes(needle))) {
+    return 'partial';
+  }
+  return null;
+}
+
+/** Distinct venues among candidates, keyed by slug (falling back to name). */
+function distinctVenues(rs: Array<{ venue?: string; venueSlug?: string }>): number {
+  return new Set(rs.map((r) => r.venueSlug ?? foldVenue(r.venue))).size;
 }
 
 /** Tock returns `2026-07-31T17:00:00`; compare on the local date part only. */
@@ -174,13 +203,16 @@ export function registerAccountTools(
     'tock_verify_reservation',
     {
       description:
-        "Verify that a Tock reservation actually exists, by re-querying the account's own reservation lists (upcoming, canceled and past) and returning an explicit verdict. Use this after ANY booking attempt — a success screen or screenshot is not proof that a booking landed. Returns verdict `confirmed`, `cancelled` (it existed and was voided) or `not_found`. A `not_found` must be reported to the user as \"attempted, unverified\", never as a failure to book and never as a success. Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension.",
+        "Verify that a Tock reservation actually exists, by re-querying the account's own reservation lists (upcoming, canceled and past) and returning an explicit verdict. Use this after ANY booking attempt — a success screen or screenshot is not proof that a booking landed. Returns verdict `confirmed`, `cancelled` (it existed and was voided), `not_found`, or `ambiguous` (the venue string matched more than one restaurant on that date — re-run with the exact slug). A `not_found` must be reported to the user as \"attempted, unverified\", never as a failure to book and never as a success. Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension.",
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: z.object({
         venue: z
           .string()
           .min(1)
-          .describe('Restaurant name or Tock slug; matched case-insensitively as a substring.'),
+          .describe(
+            'Restaurant name or Tock slug. An exact (case/accent-insensitive) name or slug match wins; ' +
+              'otherwise a substring of 4+ characters. Prefer the exact slug.'
+          ),
         date: z
           .string()
           .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD.')
@@ -213,12 +245,35 @@ export function registerAccountTools(
       const truncated = lists.some((l) => l.truncated);
       const searched = { upcoming: upcoming.length, canceled: canceled.length, past: past.length };
 
-      const candidates = [...upcoming, ...canceled, ...past].filter(
+      const onDate = [...upcoming, ...canceled, ...past].filter(
         (r) =>
-          matchesVenue(r, input.venue) &&
           matchesDate(r, input.date) &&
           (input.partySize === undefined || r.partySize === input.partySize)
       );
+      // An exact name/slug match outranks a substring hit at another venue.
+      const exact = onDate.filter((r) => matchVenue(r, input.venue) === 'exact');
+      const candidates = exact.length
+        ? exact
+        : onDate.filter((r) => matchVenue(r, input.venue) === 'partial');
+
+      // A partial query that hits two different restaurants on the date must
+      // not confirm either: the booking may be at the one the user did not mean.
+      if (distinctVenues(candidates) > 1) {
+        const venues = [...new Set(candidates.map((r) => r.venue ?? r.venueSlug))];
+        return minifiedResult({
+          verdict: 'ambiguous',
+          match: null,
+          candidates,
+          searched,
+          truncated,
+          recheckAdvised: false,
+          reportAs: 'attempted, unverified',
+          summary:
+            `"${input.venue}" matches ${venues.length} different restaurants on ${input.date} ` +
+            `(${venues.join(', ')}). Re-run with the exact Tock slug or full venue name. Report as ` +
+            `"attempted, unverified" until one venue is confirmed.`,
+        });
+      }
       // Prefer a live record: a venue can hold both a cancelled and a rebooked
       // reservation for the same date, and the live one is the answer.
       const live = candidates.find((r) => r.cancelledOrRefunded !== true);

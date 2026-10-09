@@ -310,6 +310,76 @@ describe('tock_verify_reservation', () => {
     await h.close();
   });
 
+  // fleet-audit#769: an unanchored substring match let a generic venue string
+  // confirm a booking at a different restaurant, and an all-non-ASCII name
+  // stripped to '' and never matched.
+  const onDate = (name: string, slug: string, id: number) => ({
+    ...soul,
+    id,
+    business: { name, domainName: slug },
+  });
+
+  it('does not confirm a different restaurant on a short generic venue string', async () => {
+    const h = await verifyHarness(allSelections([onDate('Bar Pastoral', 'barpastoral', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'bar', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).not.toBe('confirmed');
+    await h.close();
+  });
+
+  it('reports ambiguous, not confirmed, when the venue string matches two restaurants', async () => {
+    const h = await verifyHarness(
+      allSelections([soul, onDate('Velvet Lounge', 'velvetlounge', 2)])
+    );
+    const res = parseToolResult<{ verdict: string; reportAs: string; candidates: { venue: string }[] }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Lounge', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('ambiguous');
+    expect(res.reportAs).toBe('attempted, unverified');
+    expect(res.candidates.map((c) => c.venue).sort()).toEqual(['Soul Gastrolounge', 'Velvet Lounge']);
+    await h.close();
+  });
+
+  it('prefers an exact name or slug match over a substring match at another venue', async () => {
+    const h = await verifyHarness(
+      allSelections([onDate('Alinea Salon', 'alineasalon', 1), onDate('Alinea', 'alinea', 2)])
+    );
+    const res = parseToolResult<{ verdict: string; match: { venueSlug: string } }>(
+      await h.callTool('tock_verify_reservation', { venue: 'alinea', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    expect(res.match.venueSlug).toBe('alinea');
+    await h.close();
+  });
+
+  it('confirms a short venue name on an exact match', async () => {
+    const h = await verifyHarness(allSelections([onDate('Ume', 'ume', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'UME', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
+  it('matches a venue whose name is entirely non-ASCII', async () => {
+    const h = await verifyHarness(allSelections([onDate('鮨 さいとう', 'sushisaito', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: '鮨さいとう', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
+  it('folds accents so a plain-ASCII query matches an accented name', async () => {
+    const h = await verifyHarness(allSelections([onDate('Café Brûlée', 'cb-chicago', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'cafe brulee', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
   it('reports not_found as "attempted, unverified" — never as a pass', async () => {
     // The exact incident shape: nothing in any list.
     const h = await verifyHarness(allSelections([], [], []));
