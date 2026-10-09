@@ -145,7 +145,13 @@ booking appears only in `canceled`), and it applies the lag rule below for you,
 returning `recheckAdvised: true` when an absence is still inconclusive. Pass
 the venue's exact Tock slug when you have it: a partial name that matches more
 than one restaurant on the date returns verdict `ambiguous` (with the
-candidates), never `confirmed` — re-run with the slug.
+candidates), never `confirmed` — re-run with the slug. A venue query under 4
+characters matches only a full name or slug; if it merely appears in a venue
+booked that date, the result is `not_found` with `venueQueryTooShort: true`,
+`nearMatches` and `recheckAdvised: true` — re-run with the full name, and never
+read that `not_found` as proof the booking failed. Handle all four verdicts
+(`confirmed`, `cancelled`, `not_found`, `ambiguous`); anything but `confirmed`
+is reported per the rules below.
 
 Anything less — including a screenshot of a success screen — must be reported
 as **"attempted, unverified."** Two Tock-specific traps make the stricter rule

@@ -24,7 +24,7 @@ connects.
 
 ```bash
 npm run build   # tsc → dist/*.js + esbuild → dist/bundle.js (the bin entry)
-npm test        # vitest, 8 files / 61 tests, fully mocked, no bridge needed
+npm test        # typecheck + vitest, fully mocked, no bridge needed
 ```
 
 `tests/helpers.ts` exports `stubClient({ slices, html, graphql, errors })` — a
@@ -92,7 +92,12 @@ parsers in that style; a hard-coded path breaks on the next CMS reshuffle.
   the same venue/date (a rebook leaves both); and treat an absence seen inside
   `LAG_WINDOW_MINUTES` as inconclusive, because `PatronReservationHistory` lags
   the Reservations tab by minutes. A `not_found` is `"attempted, unverified"` —
-  never "failed to book", never a pass.
+  never "failed to book", never a pass. Venue matching is guarded too
+  (fleet-audit#769): an exact folded name/slug match wins, a substring needs
+  `MIN_SUBSTRING_MATCH` (4) characters, two venues hit on one date return a
+  fourth verdict `ambiguous`, and a shorter query that only partially matches
+  returns `not_found` flagged `venueQueryTooShort` + `nearMatches` with
+  `recheckAdvised: true` — an absence caused by the query is not evidence.
   **Live-verified 2026-08-10** through the bridge against the signed-in account:
   a real past booking (Spaghett 2025-11-13) returns `confirmed` by both name and
   slug; the incident booking (Soul Gastrolounge 2026-07-31) returns `not_found`
