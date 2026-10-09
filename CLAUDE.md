@@ -106,7 +106,10 @@ parsers in that style; a hard-coded path breaks on the next CMS reshuffle.
 - **Tock has no profile query.** `tock_get_profile` derives identity from
   `ownerPatron` on a purchase, so a signed-in account with zero reservations
   yields a deliberate `McpToolError` rather than a fabricated profile. That is
-  the designed outcome, not a bug to route around.
+  the designed outcome, not a bug to route around. It never reads
+  `dinerPatron` (can be a guest) and skips any purchase with
+  `firstTransferredTo` set (the owner can be the other party), so it scans a
+  page of purchases rather than the first one.
 - **`/api/consumer/*` is protobuf**, not JSON — a JSON body gets `415`. It only
   drives autocomplete. The SSR store already has everything, so we don't call it.
 

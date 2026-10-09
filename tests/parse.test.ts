@@ -203,9 +203,23 @@ describe('parseAccountIdentity', () => {
     expect(parseAccountIdentity(data)).toEqual({ firstName: 'Chris', lastName: 'Hall', email: 'c@example.com', id: 7 });
   });
 
-  it('falls back to dinerPatron when ownerPatron is absent', () => {
+  it('never reads identity from dinerPatron, which can be a guest', () => {
+    // fleet-audit#770: the diner on a booking can be a friend; only the owner
+    // of a purchase is the account holder.
     const data = { purchases: [{ id: 1, dinerPatron: { firstName: 'Sam', email: 's@example.com', id: 3 } }] };
-    expect(parseAccountIdentity(data)).toMatchObject({ firstName: 'Sam', email: 's@example.com' });
+    expect(parseAccountIdentity(data)).toBeNull();
+  });
+
+  it('skips a transferred purchase, whose owner may be someone else', () => {
+    // fleet-audit#770: on a ticket transferred to (or from) the user, the
+    // ownerPatron can be the other party.
+    const data = {
+      purchases: [
+        { id: 1, firstTransferredTo: { id: 9 }, ownerPatron: { firstName: 'Friend', email: 'f@example.com', id: 5 } },
+        { id: 2, firstTransferredTo: null, ownerPatron: { firstName: 'Chris', email: 'c@example.com', id: 7 } },
+      ],
+    };
+    expect(parseAccountIdentity(data)).toMatchObject({ firstName: 'Chris', email: 'c@example.com', id: 7 });
   });
 
   it('returns null when there are no purchases to read identity from', () => {

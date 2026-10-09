@@ -594,6 +594,36 @@ describe('account tools (GraphQL)', () => {
     await h.close();
   });
 
+  it('tock_get_profile looks past a transferred first reservation for the account owner', async () => {
+    // fleet-audit#770: reading only the first purchase returned the other
+    // party's name and email when that purchase was a transferred ticket.
+    const transferred = {
+      ...purchase,
+      id: 1,
+      firstTransferredTo: { id: 9 },
+      ownerPatron: { firstName: 'Friend', lastName: 'X', email: 'f@example.com', id: 5 },
+    };
+    const page = (list: unknown[]) => (v: Record<string, unknown>) => ({
+      purchases: list.slice(v.offset as number, (v.offset as number) + (v.limit as number)),
+    });
+    const h = await createTestHarness((s) =>
+      registerAccountTools(
+        s,
+        stubClient({
+          graphql: {
+            'PatronReservationHistory::UPCOMING': page([transferred, purchase]),
+            'PatronReservationHistory::PAST': page([]),
+          },
+        })
+      )
+    );
+    const res = parseToolResult<{ firstName: string; email: string }>(
+      await h.callTool('tock_get_profile', {})
+    );
+    expect(res).toMatchObject({ firstName: 'Chris', email: 'c@example.com' });
+    await h.close();
+  });
+
   it('tock_get_profile falls back to PAST when no upcoming reservations', async () => {
     const h = await createTestHarness((s) =>
       registerAccountTools(

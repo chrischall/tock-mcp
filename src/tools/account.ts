@@ -77,6 +77,10 @@ async function fetchPurchases(
 // pages; a list longer than that is reported as truncated, and an absence in
 // it is inconclusive (chrischall/fleet-audit#266).
 const VERIFY_PAGE_SIZE = 50;
+
+// tock_get_profile reads this many purchases per list looking for one whose
+// owner is the account holder (an untransferred purchase).
+const PROFILE_PAGE_SIZE = 10;
 const VERIFY_MAX_PAGES = 10;
 
 /** Read every page of one selection, up to VERIFY_MAX_PAGES. */
@@ -143,11 +147,15 @@ export function registerAccountTools(
     async ({ view }) => {
       // Tock exposes no standalone profile query; ownerPatron rides on each
       // purchase. Check upcoming first, then past, for an identity to read.
+      // Read a page, not one record: transferred purchases are skipped
+      // (their owner may be someone else), so the first may not qualify.
       let identity = parseAccountIdentity(
-        await fetchPurchases(client, 'UPCOMING', 0, 1)
+        await fetchPurchases(client, 'UPCOMING', 0, PROFILE_PAGE_SIZE)
       );
       if (!identity) {
-        identity = parseAccountIdentity(await fetchPurchases(client, 'PAST', 0, 1));
+        identity = parseAccountIdentity(
+          await fetchPurchases(client, 'PAST', 0, PROFILE_PAGE_SIZE)
+        );
       }
       if (!identity) {
         // The GraphQL calls above succeed only when signed in (else they raise

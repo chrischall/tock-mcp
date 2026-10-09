@@ -310,8 +310,10 @@ export function parseReservations(data: unknown): Reservation[] {
 /**
  * Derive the account holder's identity from a `purchases` payload. Tock has no
  * standalone profile GraphQL query; each purchase carries `ownerPatron`
- * (the account holder) and `dinerPatron`. Returns null when no purchase is
- * present to read identity from.
+ * (the account holder) and `dinerPatron`. Only `ownerPatron` on a purchase that
+ * was never transferred is trusted: a diner can be a guest, and on a transferred
+ * ticket the owner can be the other party (fleet-audit#770). Returns null when
+ * no such purchase is present to read identity from.
  */
 export function parseAccountIdentity(data: unknown): AccountIdentity | null {
   const purchases =
@@ -319,7 +321,8 @@ export function parseAccountIdentity(data: unknown): AccountIdentity | null {
       ? ((data as Obj).purchases as Obj[])
       : [];
   for (const p of purchases) {
-    const owner = isObj(p.ownerPatron) ? p.ownerPatron : isObj(p.dinerPatron) ? p.dinerPatron : null;
+    if (p.firstTransferredTo != null) continue;
+    const owner = isObj(p.ownerPatron) ? p.ownerPatron : null;
     if (owner && (owner.email || owner.firstName)) {
       return {
         firstName: owner.firstName || undefined,
