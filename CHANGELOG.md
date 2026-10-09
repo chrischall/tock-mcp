@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.8](https://github.com/chrischall/tock-mcp/compare/v1.1.7...v1.1.8) (2026-10-09)
+
+
+### Bug Fixes
+
+* annotate tools truthfully and sync manifests with the served tools ([#159](https://github.com/chrischall/tock-mcp/issues/159)) ([2af1009](https://github.com/chrischall/tock-mcp/commit/2af10097dc8cba700156835f74943d9e025ca161))
+* **config:** validate TOCK_WS_PORT and show the real port in the banner ([#156](https://github.com/chrischall/tock-mcp/issues/156)) ([49c0f70](https://github.com/chrischall/tock-mcp/commit/49c0f709ca687e03b802c263489f492f5779abd2))
+* declare the plugin MCP config under the mcpServers key Claude Code reads ([#160](https://github.com/chrischall/tock-mcp/issues/160)) ([848f4ba](https://github.com/chrischall/tock-mcp/commit/848f4ba815300e9a77bdda64dd646584355ed12c))
+* **deps:** Bump source-map-js ([#158](https://github.com/chrischall/tock-mcp/issues/158)) ([befe7cd](https://github.com/chrischall/tock-mcp/commit/befe7cdf9aeacd0da13e55d2ce370962147f2252))
+* **deps:** update @chrischall/mcp-utils to 3.0.0 ([#157](https://github.com/chrischall/tock-mcp/issues/157)) ([71f605d](https://github.com/chrischall/tock-mcp/commit/71f605d19899afacd0c90f87a24d1d742e2bc859))
+* resolve low-severity audit findings ([#152](https://github.com/chrischall/tock-mcp/issues/152)) ([c48ed8c](https://github.com/chrischall/tock-mcp/commit/c48ed8ce66e01f04ec1742d3fe434e81b125a9d1))
+* **verify:** flag a too-short venue query instead of a bare not_found ([#155](https://github.com/chrischall/tock-mcp/issues/155)) ([32b086a](https://github.com/chrischall/tock-mcp/commit/32b086ac3af9d53784d5d6ee1bb85d4b46bf5999))
+
 ## [1.1.7](https://github.com/chrischall/tock-mcp/compare/v1.1.6...v1.1.7) (2026-10-07)
 
 
