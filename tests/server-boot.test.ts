@@ -25,10 +25,10 @@ function listToolsViaStdio(entry: string, cwd: string): Promise<string[]> {
   return new Promise((resolve, reject) => {
     const child = spawn('node', [entry], {
       cwd,
-      // A random unused-ish port so the boot test never fights the real 37149
+      // A non-default port so the boot test never fights the real 37149
       // bridge; the server binds lazily on first request, not at boot, so this
       // is belt-and-suspenders.
-      env: { ...process.env, TOCK_WS_PORT: '0' },
+      env: { ...process.env, TOCK_WS_PORT: '37199' },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     let out = '';

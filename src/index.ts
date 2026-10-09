@@ -16,29 +16,26 @@
 // The transport is built in the caller so the server still boots (and answers
 // tools/list) when the bridge/extension isn't up yet — the error surfaces on
 // the first tool call.
-import { runMcp, readEnvVar } from '@chrischall/mcp-utils';
+import { runMcp } from '@chrischall/mcp-utils';
 import { registerBridgeHealthcheckTool } from '@chrischall/mcp-utils/fetchproxy';
 import { VERSION } from './version.js';
+import { buildBanner, resolveWsPort } from './config.js';
 import { TockClient } from './client.js';
 import { FetchproxyTransport } from './transport-fetchproxy.js';
 import { registerDiscoverTools } from './tools/discover.js';
 import { registerRestaurantTools } from './tools/restaurants.js';
 import { registerAccountTools } from './tools/account.js';
 
-const wsPort = readEnvVar('TOCK_WS_PORT');
+const wsPort = resolveWsPort();
 const transport = new FetchproxyTransport({
-  port: wsPort ? Number(wsPort) : undefined,
+  port: wsPort,
   version: VERSION,
 });
 
 const client = new TockClient({ transport });
 await client.start();
 
-const banner =
-  `[tock-mcp] v${VERSION} — WebSocket bridge via @fetchproxy/server on 127.0.0.1:37149. ` +
-  'Install ContextMint Bridge (see https://github.com/nullnet-app/contextmint-bridge/releases) ' +
-  'and sign in at exploretock.com. First request prints a one-time pair code to ' +
-  'approve in the extension. This project was developed and is maintained by AI.';
+const banner = buildBanner(VERSION, wsPort);
 
 await runMcp({
   name: 'tock-mcp',
