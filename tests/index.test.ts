@@ -31,3 +31,15 @@ describe('tool roster', () => {
     await h.close();
   });
 });
+
+describe('manifest.json tool list', () => {
+  it('advertises every registered tool, including the bridge healthcheck', async () => {
+    const { readFileSync } = await import('node:fs');
+    const manifest = JSON.parse(
+      readFileSync(new URL('../manifest.json', import.meta.url), 'utf8')
+    ) as { tools: Array<{ name: string; description: string }> };
+    const names = manifest.tools.map((t) => t.name).sort();
+    expect(names).toEqual([...EXPECTED, 'tock_healthcheck'].sort());
+    for (const t of manifest.tools) expect(t.description.length).toBeGreaterThan(0);
+  });
+});

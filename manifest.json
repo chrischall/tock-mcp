@@ -59,6 +59,14 @@
     {
       "name": "tock_get_profile",
       "description": "Get the signed-in user's Tock account identity — name, email (requires a signed-in exploretock.com tab)."
+    },
+    {
+      "name": "tock_verify_reservation",
+      "description": "Verify a Tock booking actually landed: re-query the account's upcoming, canceled and past reservations and return confirmed / cancelled / not_found (requires a signed-in exploretock.com tab)."
+    },
+    {
+      "name": "tock_healthcheck",
+      "description": "Check each hop of the ContextMint Bridge connection to exploretock.com — call it when a tool fails to see which hop broke."
     }
   ],
   "compatibility": {
