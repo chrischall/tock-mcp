@@ -107,7 +107,10 @@ export class TockClient {
       throw new SessionNotAuthenticatedError('Tock', 'exploretock.com');
     }
     this.throwIfNotOk(result, 'POST', path);
-    let parsed: { data?: T; errors?: Array<{ message?: string }> };
+    let parsed: {
+      data?: T;
+      errors?: Array<{ message?: string; extensions?: { code?: unknown } }>;
+    };
     try {
       parsed = JSON.parse(result.body);
     } catch {
@@ -121,7 +124,10 @@ export class TockClient {
     }
     if (parsed.errors?.length) {
       const msg = parsed.errors.map((e) => e.message).filter(Boolean).join('; ');
-      if (/auth|sign|login|unauthorized|permission/i.test(msg)) {
+      if (
+        parsed.errors.some((e) => AUTH_ERROR_CODES.has(String(e.extensions?.code ?? ''))) ||
+        AUTH_ERROR_MESSAGE.test(msg)
+      ) {
         throw new SessionNotAuthenticatedError('Tock', 'exploretock.com');
       }
       throw new McpToolError(
@@ -179,6 +185,17 @@ export class TockClient {
     }
   }
 }
+
+/** GraphQL `extensions.code` values that mean "the session is not signed in". */
+const AUTH_ERROR_CODES = new Set(['UNAUTHENTICATED', 'UNAUTHORIZED', 'FORBIDDEN']);
+
+/**
+ * Whole-phrase sign-in failures only. A bare /auth|sign|login/ substring test
+ * also matched "assignedTable", "designId", "author" and "signature", turning an
+ * ordinary schema error into a misleading "sign in again" (fleet-audit#772).
+ */
+const AUTH_ERROR_MESSAGE =
+  /\b(?:unauthori[sz]ed|unauthenticated|not (?:authori[sz]ed|authenticated|signed in|logged in)|must be (?:signed|logged) in|(?:sign|log) in to|(?:login|log in|sign in|sign-in) required|authentication (?:required|failed)|permission denied|access denied|forbidden)\b/i;
 
 /** True when a GraphQL document is provably read-only: its first operation is
  *  a `query` (or the anonymous `{ ... }` shorthand) and it declares no

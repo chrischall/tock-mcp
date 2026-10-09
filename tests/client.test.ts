@@ -139,6 +139,51 @@ describe('TockClient.graphql', () => {
     );
   });
 
+  it.each([
+    'Cannot query field "assignedTable" on type "ConsumerPurchaseSummary".',
+    'Unknown argument "designId".',
+    'Field "author" is not defined',
+    'Invalid signature on variable $offset',
+  ])('keeps an ordinary GraphQL error that merely contains auth-like letters visible: %s', async (message) => {
+    // fleet-audit#772: /auth|sign|login|.../ matched "assigned", "design",
+    // "author", "signature" and told the user to sign in again.
+    const client = new TockClient({
+      transport: new StubTransport(ok(JSON.stringify({ errors: [{ message }] }))),
+    });
+    const err = await client.graphql('X', 'query {...}').catch((e) => e);
+    expect(err).not.toBeInstanceOf(SessionNotAuthenticatedError);
+    expect(err).toBeInstanceOf(McpToolError);
+    expect((err as Error).message).toContain(message.slice(0, 20));
+  });
+
+  it.each([
+    'Not authorized',
+    'Unauthorized',
+    'You must be logged in',
+    'Please sign in to continue',
+    'Login required',
+    'Authentication required',
+    'Permission denied',
+  ])('maps a real sign-in GraphQL error to SessionNotAuthenticatedError: %s', async (message) => {
+    const client = new TockClient({
+      transport: new StubTransport(ok(JSON.stringify({ errors: [{ message }] }))),
+    });
+    await expect(client.graphql('X', 'query {...}')).rejects.toBeInstanceOf(
+      SessionNotAuthenticatedError
+    );
+  });
+
+  it('maps an UNAUTHENTICATED error code to SessionNotAuthenticatedError', async () => {
+    const client = new TockClient({
+      transport: new StubTransport(
+        ok(JSON.stringify({ errors: [{ message: 'nope', extensions: { code: 'UNAUTHENTICATED' } }] }))
+      ),
+    });
+    await expect(client.graphql('X', 'query {...}')).rejects.toBeInstanceOf(
+      SessionNotAuthenticatedError
+    );
+  });
+
   it('throws McpToolError on a non-auth GraphQL error', async () => {
     const client = new TockClient({
       transport: new StubTransport(ok(JSON.stringify({ errors: [{ message: 'bad variable' }] }))),
