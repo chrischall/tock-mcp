@@ -328,6 +328,44 @@ describe('tock_verify_reservation', () => {
     await h.close();
   });
 
+  // auto-review #153: a sub-4-character query that used to substring-match now
+  // gets not_found. That absence says nothing about the booking — it must say
+  // so, name the venues it skipped, and advise a re-run rather than reading as
+  // "the booking most likely never completed".
+  it('flags a too-short venue query as inconclusive and names the venues it skipped', async () => {
+    const h = await verifyHarness(allSelections([onDate('Bar Pastoral', 'barpastoral', 1)]));
+    const res = parseToolResult<{
+      verdict: string;
+      recheckAdvised: boolean;
+      reportAs: string;
+      venueQueryTooShort: boolean;
+      nearMatches: string[];
+      summary: string;
+    }>(
+      await h.callTool('tock_verify_reservation', { venue: 'bar', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('not_found');
+    expect(res.venueQueryTooShort).toBe(true);
+    expect(res.nearMatches).toEqual(['Bar Pastoral']);
+    expect(res.recheckAdvised).toBe(true);
+    expect(res.reportAs).toBe('attempted, unverified');
+    expect(res.summary).toMatch(/4 characters/);
+    expect(res.summary).toMatch(/Bar Pastoral/);
+    expect(res.summary).not.toMatch(/never completed/);
+    await h.close();
+  });
+
+  it('does not flag a short query when nothing on the date would have matched it', async () => {
+    const h = await verifyHarness(allSelections([soul]));
+    const res = parseToolResult<{ verdict: string; venueQueryTooShort?: boolean; nearMatches?: string[] }>(
+      await h.callTool('tock_verify_reservation', { venue: 'bar', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('not_found');
+    expect(res.venueQueryTooShort).toBeUndefined();
+    expect(res.nearMatches).toBeUndefined();
+    await h.close();
+  });
+
   it('reports ambiguous, not confirmed, when the venue string matches two restaurants', async () => {
     const h = await verifyHarness(
       allSelections([soul, onDate('Velvet Lounge', 'velvetlounge', 2)])

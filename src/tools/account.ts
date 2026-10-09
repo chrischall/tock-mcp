@@ -60,6 +60,23 @@ function matchVenue(r: { venue?: string; venueSlug?: string }, query: string): V
   return null;
 }
 
+/**
+ * Venues a too-short query (under MIN_SUBSTRING_MATCH) would have substring-
+ * matched before that floor existed. Reported on a not_found so the absence is
+ * not mistaken for proof, and the caller can re-run with the full name.
+ */
+function shortQueryNearMatches(
+  rs: Array<{ venue?: string; venueSlug?: string }>,
+  query: string
+): string[] {
+  const needle = foldVenue(query);
+  if (!needle || needle.length >= MIN_SUBSTRING_MATCH) return [];
+  const hits = rs.filter(
+    (r) => foldVenue(r.venue).includes(needle) || foldVenue(r.venueSlug).includes(needle)
+  );
+  return [...new Set(hits.map((r) => r.venue ?? r.venueSlug ?? ''))].filter(Boolean);
+}
+
 /** Distinct venues among candidates, keyed by slug (falling back to name). */
 function distinctVenues(rs: Array<{ venue?: string; venueSlug?: string }>): number {
   return new Set(rs.map((r) => r.venueSlug ?? foldVenue(r.venue))).size;
@@ -211,7 +228,9 @@ export function registerAccountTools(
           .min(1)
           .describe(
             'Restaurant name or Tock slug. An exact (case/accent-insensitive) name or slug match wins; ' +
-              'otherwise a substring of 4+ characters. Prefer the exact slug.'
+              'otherwise a substring of 4+ characters. A shorter query that only partially matches ' +
+              'returns not_found with venueQueryTooShort and nearMatches — re-run with the full name. ' +
+              'Prefer the exact slug.'
           ),
         date: z
           .string()
@@ -318,14 +337,24 @@ export function registerAccountTools(
       // An account with nothing in any list is not proof either: the wrong
       // account may be signed in, or the history did not load.
       const allEmpty = upcoming.length + canceled.length + past.length === 0;
+      // A query under MIN_SUBSTRING_MATCH characters only matches exactly, so a
+      // venue it merely appears in was skipped — that absence proves nothing.
+      const nearMatches = shortQueryNearMatches(onDate, input.venue);
+      const tooShort = nearMatches.length > 0;
       return minifiedResult({
         verdict: 'not_found',
         match: null,
         searched,
         truncated,
-        recheckAdvised: tooSoon || allEmpty || truncated,
+        recheckAdvised: tooSoon || allEmpty || truncated || tooShort,
         reportAs: 'attempted, unverified',
-        summary: tooSoon
+        ...(tooShort ? { venueQueryTooShort: true, nearMatches } : {}),
+        summary: tooShort
+          ? `No exact match for "${input.venue}" on ${input.date}, but this is inconclusive: a venue ` +
+            `query shorter than ${MIN_SUBSTRING_MATCH} characters only matches a full name or slug, and ` +
+            `it appears in ${nearMatches.join(', ')} on that date. Re-run with the full venue name or ` +
+            `exact Tock slug. Report as "attempted, unverified" — not as booked, and not as failed.`
+          : tooSoon
           ? `No matching reservation yet, but this is inconclusive: the reservations backend lags by ` +
             `minutes, so re-check in ~2 minutes before drawing any conclusion. Report as "attempted, ` +
             `unverified" — not as booked, and not yet as failed.`
