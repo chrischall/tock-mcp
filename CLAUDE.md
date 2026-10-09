@@ -24,7 +24,7 @@ connects.
 
 ```bash
 npm run build   # tsc → dist/*.js + esbuild → dist/bundle.js (the bin entry)
-npm test        # vitest, 8 files / 61 tests, fully mocked, no bridge needed
+npm test        # typecheck + vitest, fully mocked, no bridge needed
 ```
 
 `tests/helpers.ts` exports `stubClient({ slices, html, graphql, errors })` — a
