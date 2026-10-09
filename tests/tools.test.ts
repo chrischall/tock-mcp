@@ -195,7 +195,7 @@ describe('tock_get_availability', () => {
     const h = await createTestHarness((s) =>
       registerRestaurantTools(
         s,
-        stubClient({ slices: { '/alinea/search?date=2026-07-10&size=2::calendar': alineaCalendar } })
+        stubClient({ slices: { '/alinea/search?date=2026-07-10::calendar': alineaCalendar } })
       )
     );
     const res = parseToolResult<{ dateOpen: boolean; openDates: string[]; experiences: unknown[] }>(
@@ -203,6 +203,24 @@ describe('tock_get_availability', () => {
     );
     expect(res.dateOpen).toBe(true);
     expect(res.openDates).toContain('2026-07-11');
+    await h.close();
+  });
+
+  it('sends no size upstream when party_size is omitted, matching the null it reports', async () => {
+    // fleet-audit#773: a date-only call used to send size=2 upstream while
+    // reporting party_size: null — the page was computed for a party the
+    // caller never asked for.
+    const h = await createTestHarness((s) =>
+      registerRestaurantTools(
+        s,
+        stubClient({ slices: { '/alinea/search?date=2026-07-10::calendar': alineaCalendar } })
+      )
+    );
+    const res = parseToolResult<{ party_size: number | null; experiences: unknown[] }>(
+      await h.callTool('tock_get_availability', { slug: 'alinea', date: '2026-07-10' })
+    );
+    expect(res.party_size).toBeNull();
+    expect(res.experiences).toHaveLength(2);
     await h.close();
   });
 

@@ -85,7 +85,7 @@ redirects to `/city/{detectedMetro}?query=X`, so we require a metro slug.
   sizes, and the union of open dates/times. The UI filters these client-side by
   the selected date — there is no per-date availability API to call.
 
-### `/{domainName}/search?date=YYYY-MM-DD&size=N&time=HH:MM` — date-centered view
+### `/{domainName}/search?date=YYYY-MM-DD[&size=N][&time=HH:MM]` — date-centered view
 Same `calendar.offerings` store, centered on `date`. Used by `get_availability`.
 `availability` slice stays uninitialized (`isInitialized:false`) — slots render
 from `offerings`, not from that slice.

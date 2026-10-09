@@ -74,8 +74,13 @@ export function registerRestaurantTools(
       }),
     },
     async (input) => {
+      // Send `size` only when the caller gave one: a defaulted size would
+      // shape the page for a party nobody asked for while the response
+      // reports `party_size: null` (fleet-audit#773).
       const path = input.date
-        ? `/${input.slug}/search?date=${input.date}&size=${input.party_size ?? 2}`
+        ? `/${input.slug}/search?date=${input.date}${
+            input.party_size !== undefined ? `&size=${input.party_size}` : ''
+          }`
         : `/${input.slug}`;
       const calendar = await client.fetchSlice(path, 'calendar').catch((e) => {
         if (e instanceof UpstreamHttpError && e.status === 404) return null;
