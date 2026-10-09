@@ -195,7 +195,7 @@ describe('tock_get_availability', () => {
     const h = await createTestHarness((s) =>
       registerRestaurantTools(
         s,
-        stubClient({ slices: { '/alinea/search?date=2026-07-10&size=2::calendar': alineaCalendar } })
+        stubClient({ slices: { '/alinea/search?date=2026-07-10::calendar': alineaCalendar } })
       )
     );
     const res = parseToolResult<{ dateOpen: boolean; openDates: string[]; experiences: unknown[] }>(
@@ -203,6 +203,24 @@ describe('tock_get_availability', () => {
     );
     expect(res.dateOpen).toBe(true);
     expect(res.openDates).toContain('2026-07-11');
+    await h.close();
+  });
+
+  it('sends no size upstream when party_size is omitted, matching the null it reports', async () => {
+    // fleet-audit#773: a date-only call used to send size=2 upstream while
+    // reporting party_size: null — the page was computed for a party the
+    // caller never asked for.
+    const h = await createTestHarness((s) =>
+      registerRestaurantTools(
+        s,
+        stubClient({ slices: { '/alinea/search?date=2026-07-10::calendar': alineaCalendar } })
+      )
+    );
+    const res = parseToolResult<{ party_size: number | null; experiences: unknown[] }>(
+      await h.callTool('tock_get_availability', { slug: 'alinea', date: '2026-07-10' })
+    );
+    expect(res.party_size).toBeNull();
+    expect(res.experiences).toHaveLength(2);
     await h.close();
   });
 
@@ -287,6 +305,76 @@ describe('tock_verify_reservation', () => {
     const h = await verifyHarness(allSelections([soul]));
     const res = parseToolResult<{ verdict: string }>(
       await h.callTool('tock_verify_reservation', { venue: 'SOULgastro', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
+  // fleet-audit#769: an unanchored substring match let a generic venue string
+  // confirm a booking at a different restaurant, and an all-non-ASCII name
+  // stripped to '' and never matched.
+  const onDate = (name: string, slug: string, id: number) => ({
+    ...soul,
+    id,
+    business: { name, domainName: slug },
+  });
+
+  it('does not confirm a different restaurant on a short generic venue string', async () => {
+    const h = await verifyHarness(allSelections([onDate('Bar Pastoral', 'barpastoral', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'bar', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).not.toBe('confirmed');
+    await h.close();
+  });
+
+  it('reports ambiguous, not confirmed, when the venue string matches two restaurants', async () => {
+    const h = await verifyHarness(
+      allSelections([soul, onDate('Velvet Lounge', 'velvetlounge', 2)])
+    );
+    const res = parseToolResult<{ verdict: string; reportAs: string; candidates: { venue: string }[] }>(
+      await h.callTool('tock_verify_reservation', { venue: 'Lounge', date: '2026-07-31', bookedMinutesAgo: 60 })
+    );
+    expect(res.verdict).toBe('ambiguous');
+    expect(res.reportAs).toBe('attempted, unverified');
+    expect(res.candidates.map((c) => c.venue).sort()).toEqual(['Soul Gastrolounge', 'Velvet Lounge']);
+    await h.close();
+  });
+
+  it('prefers an exact name or slug match over a substring match at another venue', async () => {
+    const h = await verifyHarness(
+      allSelections([onDate('Alinea Salon', 'alineasalon', 1), onDate('Alinea', 'alinea', 2)])
+    );
+    const res = parseToolResult<{ verdict: string; match: { venueSlug: string } }>(
+      await h.callTool('tock_verify_reservation', { venue: 'alinea', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    expect(res.match.venueSlug).toBe('alinea');
+    await h.close();
+  });
+
+  it('confirms a short venue name on an exact match', async () => {
+    const h = await verifyHarness(allSelections([onDate('Ume', 'ume', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'UME', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
+  it('matches a venue whose name is entirely non-ASCII', async () => {
+    const h = await verifyHarness(allSelections([onDate('鮨 さいとう', 'sushisaito', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: '鮨さいとう', date: '2026-07-31' })
+    );
+    expect(res.verdict).toBe('confirmed');
+    await h.close();
+  });
+
+  it('folds accents so a plain-ASCII query matches an accented name', async () => {
+    const h = await verifyHarness(allSelections([onDate('Café Brûlée', 'cb-chicago', 1)]));
+    const res = parseToolResult<{ verdict: string }>(
+      await h.callTool('tock_verify_reservation', { venue: 'cafe brulee', date: '2026-07-31' })
     );
     expect(res.verdict).toBe('confirmed');
     await h.close();
@@ -567,6 +655,36 @@ describe('account tools (GraphQL)', () => {
       registerAccountTools(
         s,
         stubClient({ graphql: { 'PatronReservationHistory::UPCOMING': { purchases: [purchase] } } })
+      )
+    );
+    const res = parseToolResult<{ firstName: string; email: string }>(
+      await h.callTool('tock_get_profile', {})
+    );
+    expect(res).toMatchObject({ firstName: 'Chris', email: 'c@example.com' });
+    await h.close();
+  });
+
+  it('tock_get_profile looks past a transferred first reservation for the account owner', async () => {
+    // fleet-audit#770: reading only the first purchase returned the other
+    // party's name and email when that purchase was a transferred ticket.
+    const transferred = {
+      ...purchase,
+      id: 1,
+      firstTransferredTo: { id: 9 },
+      ownerPatron: { firstName: 'Friend', lastName: 'X', email: 'f@example.com', id: 5 },
+    };
+    const page = (list: unknown[]) => (v: Record<string, unknown>) => ({
+      purchases: list.slice(v.offset as number, (v.offset as number) + (v.limit as number)),
+    });
+    const h = await createTestHarness((s) =>
+      registerAccountTools(
+        s,
+        stubClient({
+          graphql: {
+            'PatronReservationHistory::UPCOMING': page([transferred, purchase]),
+            'PatronReservationHistory::PAST': page([]),
+          },
+        })
       )
     );
     const res = parseToolResult<{ firstName: string; email: string }>(

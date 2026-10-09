@@ -7,6 +7,7 @@ import {
   parseReservations,
   parseAccountIdentity,
 } from '../src/parse.js';
+import { PATRON_RESERVATION_HISTORY } from '../src/graphql-ops.js';
 
 // Records below mirror the real exploretock.com $REDUX_STATE shapes captured
 // during recon (docs/TOCK-API.md), trimmed to the fields the parsers read.
@@ -175,6 +176,17 @@ describe('parseReservations', () => {
     });
   });
 
+  it('reports no location field the GraphQL query never selects', () => {
+    // fleet-audit#771: Reservation.state was mapped from `p.state`, but the
+    // query selects only `city` and `country`, so it was always undefined.
+    const [r] = parseReservations({ purchases: [{ ...data.purchases[0], state: 'IL' }] });
+    expect(r).not.toHaveProperty('state');
+    for (const key of ['city', 'country'] as const) {
+      expect(r[key]).toBeDefined();
+      expect(PATRON_RESERVATION_HISTORY).toMatch(new RegExp(`^\\s*${key}$`, 'm'));
+    }
+  });
+
   it('returns [] when there is no purchases array', () => {
     expect(parseReservations({})).toEqual([]);
     expect(parseReservations(null)).toEqual([]);
@@ -191,9 +203,23 @@ describe('parseAccountIdentity', () => {
     expect(parseAccountIdentity(data)).toEqual({ firstName: 'Chris', lastName: 'Hall', email: 'c@example.com', id: 7 });
   });
 
-  it('falls back to dinerPatron when ownerPatron is absent', () => {
+  it('never reads identity from dinerPatron, which can be a guest', () => {
+    // fleet-audit#770: the diner on a booking can be a friend; only the owner
+    // of a purchase is the account holder.
     const data = { purchases: [{ id: 1, dinerPatron: { firstName: 'Sam', email: 's@example.com', id: 3 } }] };
-    expect(parseAccountIdentity(data)).toMatchObject({ firstName: 'Sam', email: 's@example.com' });
+    expect(parseAccountIdentity(data)).toBeNull();
+  });
+
+  it('skips a transferred purchase, whose owner may be someone else', () => {
+    // fleet-audit#770: on a ticket transferred to (or from) the user, the
+    // ownerPatron can be the other party.
+    const data = {
+      purchases: [
+        { id: 1, firstTransferredTo: { id: 9 }, ownerPatron: { firstName: 'Friend', email: 'f@example.com', id: 5 } },
+        { id: 2, firstTransferredTo: null, ownerPatron: { firstName: 'Chris', email: 'c@example.com', id: 7 } },
+      ],
+    };
+    expect(parseAccountIdentity(data)).toMatchObject({ firstName: 'Chris', email: 'c@example.com', id: 7 });
   });
 
   it('returns null when there are no purchases to read identity from', () => {
