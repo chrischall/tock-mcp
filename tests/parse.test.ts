@@ -7,6 +7,7 @@ import {
   parseReservations,
   parseAccountIdentity,
 } from '../src/parse.js';
+import { PATRON_RESERVATION_HISTORY } from '../src/graphql-ops.js';
 
 // Records below mirror the real exploretock.com $REDUX_STATE shapes captured
 // during recon (docs/TOCK-API.md), trimmed to the fields the parsers read.
@@ -173,6 +174,17 @@ describe('parseReservations', () => {
       experience: 'The Salon @ Alinea',
       experienceVariety: 'PRIX_FIXE',
     });
+  });
+
+  it('reports no location field the GraphQL query never selects', () => {
+    // fleet-audit#771: Reservation.state was mapped from `p.state`, but the
+    // query selects only `city` and `country`, so it was always undefined.
+    const [r] = parseReservations({ purchases: [{ ...data.purchases[0], state: 'IL' }] });
+    expect(r).not.toHaveProperty('state');
+    for (const key of ['city', 'country'] as const) {
+      expect(r[key]).toBeDefined();
+      expect(PATRON_RESERVATION_HISTORY).toMatch(new RegExp(`^\\s*${key}$`, 'm'));
+    }
   });
 
   it('returns [] when there is no purchases array', () => {

@@ -266,7 +266,8 @@ export interface Reservation {
   experience?: string;
   experienceVariety?: string;
   city?: string;
-  state?: string;
+  // No `state`: PatronReservationHistory selects only `city` and `country`
+  // (fleet-audit#771), and the query text is pinned verbatim from the web app.
   country?: string;
   cancelledOrRefunded?: boolean;
 }
@@ -291,7 +292,6 @@ export function toReservation(p: Obj): Reservation {
     experience: ticket.name || undefined,
     experienceVariety: ticket.variety || undefined,
     city: p.city || undefined,
-    state: p.state || undefined,
     country: p.country || undefined,
     cancelledOrRefunded:
       typeof p.cancelledOrRefunded === 'boolean' ? p.cancelledOrRefunded : undefined,
