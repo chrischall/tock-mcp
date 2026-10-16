@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.1.9](https://github.com/chrischall/tock-mcp/compare/v1.1.8...v1.1.9) (2026-10-16)
+
+
+### Bug Fixes
+
+* **deps:** bump @chrischall/mcp-utils to 3.0.3 and @fetchproxy/server to 3.6.2 ([#164](https://github.com/chrischall/tock-mcp/issues/164)) ([89c87d3](https://github.com/chrischall/tock-mcp/commit/89c87d3ec696df04ae974beeea94f67e09e4e28e))
+* **deps:** Bump the production-dependencies group with 2 updates ([#162](https://github.com/chrischall/tock-mcp/issues/162)) ([0a11699](https://github.com/chrischall/tock-mcp/commit/0a11699a2c6cf228619190338baea05a4db18cb3))
+* **plugin:** launch the published package so marketplace installs start ([#165](https://github.com/chrischall/tock-mcp/issues/165)) ([a88f165](https://github.com/chrischall/tock-mcp/commit/a88f165513c865d6088b185c61a12368785b8d64))
+
 ## [1.1.8](https://github.com/chrischall/tock-mcp/compare/v1.1.7...v1.1.8) (2026-10-09)
 
 
