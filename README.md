@@ -19,6 +19,16 @@ Every request is relayed through your own signed-in browser tab via the [Context
 
 You also need **ContextMint Bridge** (the browser extension shared by every fetchproxy-based MCP), installed from [its releases page](https://github.com/nullnet-app/contextmint-bridge/releases): in Chrome, unzip the chrome zip and load it unpacked (`chrome://extensions` → Developer mode → Load unpacked). Safari isn't available yet (it will ship inside the ContextMint app, which has no public download), so use Chrome for now. ContextMint Bridge is the fetchproxy browser extension under its new name, from the same maintainer — fetchproxy's own README (https://github.com/chrischall/fetchproxy#extension) points to it. Its source is public at https://github.com/nullnet-app/contextmint-bridge: build it yourself, or check a release zip against the `.sha256` file published beside it (`shasum -a 256 -c contextmint-bridge-chrome-<version>.zip.sha256`). Keep an exploretock.com tab open. The first tool call prints a one-time pair code to approve in the ContextMint Bridge popup — run `tock_healthcheck` to trigger it. Discovery works signed-out; the account tools need you signed in to exploretock.com.
 
+## Environment
+
+No environment variables are required. These optional knobs mirror the `.mcpb` manifest's settings:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `TOCK_WS_PORT` | `37149` | Concentrator port for the fetchproxy browser bridge. Every fetchproxy MCP on one machine shares the concentrator, so move it for all of them or none (mainly for local testing, or a hosted registration's bridge port). |
+| `FETCHPROXY_WS_HOST` | `127.0.0.1` | Bridge bind interface, a literal IP only (anything else is ignored). Keep on loopback; it exists for a hosted child in its own network namespace. |
+| `FETCHPROXY_IDENTITY_DIR` | `~/.fetchproxy/identity/` | Where the bridge's long-term identity keypair is stored, an absolute path only (anything else is ignored). For a host that runs a separate child per caller. |
+
 ## Tools
 
 - **`tock_list_metros`** — Tock cities/metros with business counts; filter by name/country.
