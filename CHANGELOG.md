@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.10](https://github.com/chrischall/tock-mcp/compare/v1.1.9...v1.1.10) (2026-10-17)
+
+
+### Bug Fixes
+
+* **deps:** Bump dotenv ([#169](https://github.com/chrischall/tock-mcp/issues/169)) ([aa96aab](https://github.com/chrischall/tock-mcp/commit/aa96aab1de4287c232681a4f1c9107a2f7ff2db0))
+
 ## [1.1.9](https://github.com/chrischall/tock-mcp/compare/v1.1.8...v1.1.9) (2026-10-16)
 
 
