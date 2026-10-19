@@ -7,6 +7,12 @@ summary: >-
   and open dates/times. Relays every request through the ContextMint Bridge
   browser extension (github.com/nullnet-app/contextmint-bridge) running in your signed-in
   exploretock.com tab, so there's no cookie paste or bot-wall dance.
+examples:
+  - prompt: Which cities can I book restaurants in on Tock?
+    note: Lists Tock metros that have bookable venues.
+  - prompt: Find tasting-menu restaurants on Tock in Chicago and tell me their cuisine and price range.
+  - prompt: What open dates and times does this Tock restaurant have for a party of 2 next Saturday, and what does the menu cost?
+    note: Read-only; reserving happens on exploretock.com.
 #
 # Hosting note (a comment, not user-facing summary text): this is a
 # BROWSER-BRIDGE MCP — it reaches its site through the user's signed-in
