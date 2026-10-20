@@ -2,11 +2,9 @@ version: 1
 name: Tock
 slug: tock
 summary: >-
-  Tock (exploretock.com) restaurant discovery for Claude — list cities,
-  search a metro, get venue details and their bookable experiences, prices,
-  and open dates/times. Relays every request through the ContextMint Bridge
-  browser extension (github.com/nullnet-app/contextmint-bridge) running in your signed-in
-  exploretock.com tab, so there's no cookie paste or bot-wall dance.
+  Find Tock restaurants by city, see experiences, prices and open times,
+  and check your reservations, all through your signed-in exploretock.com
+  tab via the ContextMint Bridge.
 examples:
   - prompt: Which cities can I book restaurants in on Tock?
     note: Lists Tock metros that have bookable venues.
