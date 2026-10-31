@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.1.10](https://github.com/chrischall/tock-mcp/compare/v1.1.9...v1.1.10) (2026-10-31)
+
+
+### Bug Fixes
+
+* **deps:** Bump dotenv ([#169](https://github.com/chrischall/tock-mcp/issues/169)) ([aa96aab](https://github.com/chrischall/tock-mcp/commit/aa96aab1de4287c232681a4f1c9107a2f7ff2db0))
+* **deps:** Bump the production-dependencies group with 2 updates ([#175](https://github.com/chrischall/tock-mcp/issues/175)) ([41e9cb7](https://github.com/chrischall/tock-mcp/commit/41e9cb70495bba939642e83ee71020235f38dd47))
+* **deps:** Bump the production-dependencies group with 3 updates ([#177](https://github.com/chrischall/tock-mcp/issues/177)) ([09e28b5](https://github.com/chrischall/tock-mcp/commit/09e28b54497292e7cf3bda2aa07900ff72fec7ee))
+
+
+### Documentation
+
+* **mint:** add sample prompts for the public catalog ([#172](https://github.com/chrischall/tock-mcp/issues/172)) ([cdc751b](https://github.com/chrischall/tock-mcp/commit/cdc751b0b895927fff41d839fa9a03eef2dee1f8))
+* **mint:** fit the catalog summary within 200 characters ([#173](https://github.com/chrischall/tock-mcp/issues/173)) ([59bc5f2](https://github.com/chrischall/tock-mcp/commit/59bc5f2ac92719cf94b47fd4ac2ff1a820df27c2))
+
 ## [1.1.9](https://github.com/chrischall/tock-mcp/compare/v1.1.8...v1.1.9) (2026-10-16)
 
 
