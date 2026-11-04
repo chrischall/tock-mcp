@@ -65,8 +65,9 @@ The first tool call prints a pair code to approve in the ContextMint Bridge popu
 
 Two tools take `view: "compact" | "full"` — `tock_get_restaurant` and
 `tock_get_profile` — and **`compact` is the default**, so you get the slim
-rung without asking for it. The other six of this server's eight tools have no
-`view`; each for its own reason, below.
+rung without asking for it. `tock_list_reservations` takes a different
+`view: "full" | "brief"` (below, "In context groups"). The other five of this
+server's eight tools have no `view`; each for its own reason, below.
 
 **Compact here is media stripping, not a field projection.** `src/view.ts`
 holds no hand-written field list, because this repo has no captured Tock
@@ -97,7 +98,7 @@ the same bytes. The rung is declared there for consistency, not for savings.
 `raw` rung**: `full` already IS the record this server parsed out of Tock's
 page, so a third value would silently alias one that exists.
 
-Why the other six have none:
+Why the others have no compact rung:
 
 - **`tock_search_restaurants`** returns `RestaurantSummary`, which carries no
   image key at all — the two image fields exist only on the *details* shape.
@@ -111,7 +112,9 @@ Why the other six have none:
   not a pass-through payload. There is no single upstream object to hand back
   or to slim.
 - **`tock_list_reservations`** returns hand-built reservation records (venue,
-  date/time, party size, experience, cancelled flag) with no media field.
+  date/time, party size, experience, cancelled flag) with no media field. Its
+  only `view` is `"full"` (default) or `"brief"`, the one-line-per-item answer
+  a context group asks for.
 - **`tock_verify_reservation`** returns a VERDICT — `verdict`, `match`,
   `searched`, `recheckAdvised`, `reportAs`, `summary`. The verdict is the
   product, and there is nothing decorative in it to remove.
@@ -121,6 +124,30 @@ Passing `view` to one of those is not an error and will not fail: the tool
 does not declare it, so zod drops the unknown key and the call runs exactly as
 it would have. You get no warning, so a successful call is not evidence the
 rung was honoured.
+
+## In context groups
+
+When this server is hosted on mcp-host, every tool except `tock_healthcheck`
+carries a `_meta.mint` hint in the **food** group (inert to any other
+client).
+
+- **Canonical read:** `tock_list_reservations` answers *what's on*
+  ("what reservations do I have?", "where are we eating this week?"). It has no
+  subject — a Tock account is one person's, so there is no list of children,
+  properties or accounts to fan out over — and no date range: it lists the
+  upcoming (or past / canceled) set, and the host narrows by date itself. With
+  `view: "brief"` it answers one line per reservation, at most 120 characters:
+  `<venue>: <experience> (party of N) — <ISO date-time | no date> — <upcoming|past|cancelled>`.
+- **Nothing here answers what's new or what's due**, so no other tool is
+  canonical. Discovery (`tock_list_metros`, `tock_search_restaurants`,
+  `tock_get_restaurant`, `tock_get_availability`), `tock_get_profile` and
+  `tock_verify_reservation` are `lookup` reads; there are no writes.
+- **A compound ask** looks like "what's on this week — and any dinner
+  reservations?": the food group calls `tock_list_reservations` beside the
+  other food members' canonical reads and merges the brief lines.
+- **Browser-bridged:** every read goes through a signed-in exploretock.com tab
+  via ContextMint Bridge. When no browser is connected, the group answers that
+  Tock "needs your browser open" rather than reporting no reservations.
 
 ## Typical flow
 

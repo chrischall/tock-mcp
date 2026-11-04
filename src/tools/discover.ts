@@ -3,6 +3,7 @@ import { NonEmptyString, minifiedResult } from '@chrischall/mcp-utils';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { TockClient } from '../client.js';
 import { parseMetros, parseListings } from '../parse.js';
+import { foodMeta } from './hints.js';
 
 export function registerDiscoverTools(
   server: McpServer,
@@ -14,6 +15,7 @@ export function registerDiscoverTools(
       description:
         'List Tock cities/metros (name, slug, business count, country/state). Use a metro slug with tock_search_restaurants. By default only metros with bookable venues are returned.',
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: foodMeta('lookup', { aliases: ['cities', 'tock cities'] }),
       inputSchema: z.object({
         query: z
           .string()
@@ -63,6 +65,7 @@ export function registerDiscoverTools(
       description:
         'List / search restaurants in a Tock metro. Pass a metro slug (from tock_list_metros, e.g. "chicago") and an optional text query. Returns venues with cuisine, price band, neighborhood, and their Tock slug (use it with tock_get_restaurant / tock_get_availability). Does NOT include bookable slots.',
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: foodMeta('lookup', { aliases: ['restaurants', 'places to eat', 'tasting menu', 'fine dining'] }),
       inputSchema: z.object({
         metro: NonEmptyString.describe('Metro slug, e.g. "chicago" or "new-york".'),
         query: z

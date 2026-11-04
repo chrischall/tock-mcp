@@ -3,11 +3,12 @@ import { McpToolError, SessionNotAuthenticatedError, minifiedResult } from '@chr
 import { viewArg, viewResponse } from '../view.js';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { TockClient } from '../client.js';
-import { parseReservations, parseAccountIdentity } from '../parse.js';
+import { parseReservations, parseAccountIdentity, type Reservation } from '../parse.js';
 import {
   PATRON_RESERVATION_HISTORY,
   type ReservationSelection,
 } from '../graphql-ops.js';
+import { foodMeta } from './hints.js';
 
 // The signed-in patron's reservations come from Tock's GraphQL API
 // (POST /api/graphql/PatronReservationHistory) — NOT the SSR store, where the
@@ -145,6 +146,27 @@ async function fetchAllReservations(
   return { reservations, truncated: true };
 }
 
+/** The most a `view: "brief"` line may run to (the context-groups contract). */
+const BRIEF_MAX = 120;
+
+/**
+ * One reservation as one line: `title — <ISO date | no date> — <status>`.
+ * The title is the venue, then the experience and party size when known; the
+ * date is Tock's own local ISO date-time; the status is the list it was read
+ * from, or `cancelled` when Tock marks it cancelled or refunded. A title too
+ * long for the line is cut with an ellipsis, never the date or the status.
+ */
+export function briefLine(r: Reservation, listed: string): string {
+  const venue = r.venue ?? r.venueSlug ?? '(unnamed venue)';
+  const party = r.partySize ? ` (party of ${r.partySize})` : '';
+  const title = `${venue}${r.experience ? `: ${r.experience}` : ''}${party}`;
+  const status = r.cancelledOrRefunded === true ? 'cancelled' : listed === 'canceled' ? 'cancelled' : listed;
+  const tail = ` — ${r.dateTime ?? 'no date'} — ${status}`;
+  const room = BRIEF_MAX - tail.length;
+  const shown = title.length > room ? `${title.slice(0, Math.max(room - 1, 0))}…` : title;
+  return `${shown}${tail}`;
+}
+
 export function registerAccountTools(
   server: McpServer,
   client: TockClient
@@ -153,8 +175,12 @@ export function registerAccountTools(
     'tock_list_reservations',
     {
       description:
-        "List the signed-in user's Tock reservations (upcoming, past, or canceled) with venue, date/time, party size, and experience. Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension.",
+        "List the signed-in user's Tock reservations (upcoming, past, or canceled) with venue, date/time, party size, and experience. Pass view: \"brief\" for one line per reservation. Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension.",
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: foodMeta('whats-on', {
+        canonical: true,
+        aliases: ['reservations', 'dinner reservations', 'bookings', 'dinner plans', 'where are we eating'],
+      }),
       inputSchema: z.object({
         status: z
           .enum(['upcoming', 'past', 'canceled'])
@@ -162,6 +188,13 @@ export function registerAccountTools(
           .describe('Which reservations to list (default upcoming).'),
         limit: z.number().int().positive().max(100).optional().describe('Max to return (default 30).'),
         offset: z.number().int().nonnegative().optional().describe('Pagination offset (default 0).'),
+        view: z
+          .enum(['full', 'brief'])
+          .optional()
+          .describe(
+            '"full" (default) returns the reservation records as JSON; "brief" returns one line per ' +
+              'reservation: venue: experience (party of N) — <ISO date-time or "no date"> — <upcoming|past|cancelled>.'
+          ),
       }),
     },
     async (input) => {
@@ -173,6 +206,14 @@ export function registerAccountTools(
         input.limit ?? 30
       );
       const reservations = parseReservations(data);
+      if (input.view === 'brief') {
+        const listed = input.status ?? 'upcoming';
+        return {
+          content: [
+            { type: 'text' as const, text: reservations.map((r) => briefLine(r, listed)).join('\n') },
+          ],
+        };
+      }
       return minifiedResult({
         status: input.status ?? 'upcoming',
         count: reservations.length,
@@ -187,6 +228,7 @@ export function registerAccountTools(
       description:
         "Get the signed-in user's Tock account identity (name, email). Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension. Derived from your reservation records, so it needs at least one reservation on the account.",
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: foodMeta('lookup'),
       inputSchema: z.object({
         view: viewArg(),}),
     },
@@ -222,6 +264,7 @@ export function registerAccountTools(
       description:
         "Verify that a Tock reservation actually exists, by re-querying the account's own reservation lists (upcoming, canceled and past) and returning an explicit verdict. Use this after ANY booking attempt — a success screen or screenshot is not proof that a booking landed. Returns verdict `confirmed`, `cancelled` (it existed and was voided), `not_found`, or `ambiguous` (the venue string matched more than one restaurant on that date — re-run with the exact slug). A `not_found` must be reported to the user as \"attempted, unverified\", never as a failure to book and never as a success. Requires a browser tab signed in to exploretock.com via the ContextMint Bridge extension.",
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: foodMeta('lookup', { aliases: ['did my booking go through', 'confirm reservation'] }),
       inputSchema: z.object({
         venue: z
           .string()
