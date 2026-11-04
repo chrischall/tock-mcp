@@ -137,7 +137,11 @@ client).
   properties or accounts to fan out over — and no date range: it lists the
   upcoming (or past / canceled) set, and the host narrows by date itself. With
   `view: "brief"` it answers one line per reservation, at most 120 characters:
-  `<venue>: <experience> (party of N) — <ISO date-time | no date> — <upcoming|past|cancelled>`.
+  `<venue>: <experience> (party of N) — <ISO date-time | no date> — <upcoming|past|cancelled>`,
+  inside the untrusted-data envelope as `data: string[]` (venue and experience
+  names are the restaurants' text). An empty page answers `-- none`, a full
+  page ends with `-- more`, and a venue name starting `-- ` or `\` is escaped
+  with one leading `\`.
 - **Nothing here answers what's new or what's due**, so no other tool is
   canonical. Discovery (`tock_list_metros`, `tock_search_restaurants`,
   `tock_get_restaurant`, `tock_get_availability`), `tock_get_profile` and

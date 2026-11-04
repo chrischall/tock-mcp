@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { McpToolError, SessionNotAuthenticatedError, minifiedResult } from '@chrischall/mcp-utils';
+import {
+  McpToolError,
+  SessionNotAuthenticatedError,
+  UNTRUSTED_CONTENT_RULE,
+  minifiedResult,
+  untrustedEnvelope,
+} from '@chrischall/mcp-utils';
 import { viewArg, viewResponse } from '../view.js';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { TockClient } from '../client.js';
@@ -149,22 +155,53 @@ async function fetchAllReservations(
 /** The most a `view: "brief"` line may run to (the context-groups contract). */
 const BRIEF_MAX = 120;
 
+/** The shortest a title is cut to before the rest of the line gives way too. */
+const TITLE_FLOOR = 24;
+
+/** Who writes the brief lines' text: venue and experience names are the restaurants'. */
+const BRIEF_NOTE = `Venue and experience names are written by the restaurants on Tock. ${UNTRUSTED_CONTENT_RULE}`;
+
+const cut = (s: string, n: number): string => (s.length > n ? `${s.slice(0, Math.max(n - 1, 0))}…` : s);
+
 /**
  * One reservation as one line: `title — <ISO date | no date> — <status>`.
  * The title is the venue, then the experience and party size when known; the
  * date is Tock's own local ISO date-time; the status is the list it was read
- * from, or `cancelled` when Tock marks it cancelled or refunded. A title too
- * long for the line is cut with an ellipsis, never the date or the status.
+ * from, or `cancelled` when Tock marks it cancelled or refunded.
+ *
+ * A title starting with `-- ` (a note) or `\` is escaped with one leading
+ * backslash, so a venue name can never masquerade as a note. The line is cut
+ * to ≤ 120 chars as a WHOLE, title first: the title shortens until the line
+ * fits, and if the rest still overflows once the title is at its floor, the
+ * line itself is cut.
  */
 export function briefLine(r: Reservation, listed: string): string {
   const venue = r.venue ?? r.venueSlug ?? '(unnamed venue)';
   const party = r.partySize ? ` (party of ${r.partySize})` : '';
-  const title = `${venue}${r.experience ? `: ${r.experience}` : ''}${party}`;
+  const raw = `${venue}${r.experience ? `: ${r.experience}` : ''}${party}`;
+  const title = raw.startsWith('-- ') || raw.startsWith('\\') ? `\\${raw}` : raw;
   const status = r.cancelledOrRefunded === true ? 'cancelled' : listed === 'canceled' ? 'cancelled' : listed;
   const tail = ` — ${r.dateTime ?? 'no date'} — ${status}`;
-  const room = BRIEF_MAX - tail.length;
-  const shown = title.length > room ? `${title.slice(0, Math.max(room - 1, 0))}…` : title;
-  return `${shown}${tail}`;
+  if (title.length + tail.length <= BRIEF_MAX) return `${title}${tail}`;
+  const shown = cut(title, Math.max(BRIEF_MAX - tail.length, Math.min(title.length, TITLE_FLOOR)));
+  return cut(`${shown}${tail}`, BRIEF_MAX);
+}
+
+/**
+ * The brief answer: the lines inside the untrusted-data envelope as
+ * `data: string[]`, minified. An empty page answers the note `-- none`; a
+ * full page (as many rows as asked for) ends with the note `-- more`, since
+ * Tock reports no total.
+ */
+export function briefResult(
+  reservations: Reservation[],
+  listed: string,
+  limit: number
+): ReturnType<typeof minifiedResult> {
+  const lines =
+    reservations.length === 0 ? ['-- none'] : reservations.map((r) => briefLine(r, listed));
+  if (reservations.length > 0 && reservations.length >= limit) lines.push('-- more');
+  return minifiedResult(untrustedEnvelope(lines, { note: BRIEF_NOTE }));
 }
 
 export function registerAccountTools(
@@ -193,7 +230,8 @@ export function registerAccountTools(
           .optional()
           .describe(
             '"full" (default) returns the reservation records as JSON; "brief" returns one line per ' +
-              'reservation: venue: experience (party of N) — <ISO date-time or "no date"> — <upcoming|past|cancelled>.'
+              'reservation: venue: experience (party of N) — <ISO date-time or "no date"> — <upcoming|past|cancelled>, ' +
+              'inside the untrusted-data envelope as data: string[], with a "-- none" note for an empty page and "-- more" for a full one.'
           ),
       }),
     },
@@ -207,12 +245,7 @@ export function registerAccountTools(
       );
       const reservations = parseReservations(data);
       if (input.view === 'brief') {
-        const listed = input.status ?? 'upcoming';
-        return {
-          content: [
-            { type: 'text' as const, text: reservations.map((r) => briefLine(r, listed)).join('\n') },
-          ],
-        };
+        return briefResult(reservations, input.status ?? 'upcoming', input.limit ?? 30);
       }
       return minifiedResult({
         status: input.status ?? 'upcoming',
