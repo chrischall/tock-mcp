@@ -161,12 +161,24 @@ describe('tock_list_reservations view: brief', () => {
     },
   ];
 
-  async function brief(args: Record<string, unknown>, selection = 'UPCOMING'): Promise<string[]> {
-    const h = await harness({ graphql: { [`PatronReservationHistory::${selection}`]: { purchases } } });
+  async function briefText(
+    args: Record<string, unknown>,
+    selection = 'UPCOMING',
+    rows: unknown[] = purchases
+  ): Promise<string> {
+    const h = await harness({ graphql: { [`PatronReservationHistory::${selection}`]: { purchases: rows } } });
     const res = await h.callTool('tock_list_reservations', { ...args, view: 'brief' });
     await h.close();
-    const text = (res.content as { type: string; text: string }[])[0].text;
-    return text.split('\n');
+    return (res.content as { type: string; text: string }[])[0].text;
+  }
+
+  async function brief(
+    args: Record<string, unknown>,
+    selection = 'UPCOMING',
+    rows: unknown[] = purchases
+  ): Promise<string[]> {
+    const body = JSON.parse(await briefText(args, selection, rows)) as { data: string[] };
+    return body.data;
   }
 
   it('answers one line per item, each ≤ 120 chars, shaped "title — <ISO date | no date> — <status>"', async () => {
@@ -192,11 +204,47 @@ describe('tock_list_reservations view: brief', () => {
     expect(lines[1].endsWith(' — cancelled')).toBe(true);
   });
 
-  it('answers no lines when there is nothing', async () => {
-    const h = await harness({ graphql: { 'PatronReservationHistory::UPCOMING': { purchases: [] } } });
-    const res = await h.callTool('tock_list_reservations', { view: 'brief' });
-    await h.close();
-    expect((res.content as { text: string }[])[0].text).toBe('');
+  it('rides inside the untrusted-data envelope, minified, note first (venue names are third-party)', async () => {
+    const text = await briefText({});
+    const body = JSON.parse(text) as Record<string, unknown>;
+    expect(Object.keys(body)).toEqual(['untrusted_content', 'note', 'data']);
+    expect(body.untrusted_content).toBe(true);
+    expect(body.note).toMatch(/restaurants/);
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(text).toBe(JSON.stringify(body));
+  });
+
+  it('answers the single note line "-- none" when there is nothing', async () => {
+    expect(await brief({}, 'UPCOMING', [])).toEqual(['-- none']);
+  });
+
+  it('says "-- more" when the page came back full', async () => {
+    const lines = await brief({ limit: 3 });
+    expect(lines).toHaveLength(4);
+    expect(lines[3]).toBe('-- more');
+    expect(await brief({ limit: 4 })).toHaveLength(3);
+  });
+
+  it('escapes a title that starts with "-- " or "\\" with one leading backslash', async () => {
+    const lines = await brief({}, 'UPCOMING', [
+      { id: 1, business: { name: '-- none' }, ticketDateTime: '2026-08-01T18:00:00' },
+      { id: 2, business: { name: '\\x' }, ticketDateTime: '2026-08-01T18:00:00' },
+      { id: 3, business: { name: '--x' }, ticketDateTime: '2026-08-01T18:00:00' },
+    ]);
+    expect(lines[0]).toBe('\\-- none — 2026-08-01T18:00:00 — upcoming');
+    expect(lines[1]).toBe('\\\\x — 2026-08-01T18:00:00 — upcoming');
+    expect(lines[2]).toBe('--x — 2026-08-01T18:00:00 — upcoming');
+  });
+
+  it('cuts the WHOLE line to ≤ 120 chars, title first, even when the date runs long', async () => {
+    const lines = await brief({}, 'UPCOMING', [
+      { id: 1, business: { name: 'C'.repeat(80) }, ticketDateTime: '2'.repeat(150) },
+      { id: 2, business: { name: '-- ' + 'D'.repeat(200) }, ticketDateTime: '2026-08-01T18:00:00' },
+    ]);
+    for (const line of lines) expect(line.length, line).toBeLessThanOrEqual(120);
+    expect(lines[0].startsWith('C')).toBe(true);
+    expect(lines[1].startsWith('\\-- D')).toBe(true);
+    expect(lines[1].endsWith(' — 2026-08-01T18:00:00 — upcoming')).toBe(true);
   });
 
   it('keeps the full JSON answer by default', async () => {
