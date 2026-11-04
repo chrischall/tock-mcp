@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/chrischall/tock-mcp/compare/v1.2.0...v1.2.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **brief:** align the brief view with the fleet contract ([#179](https://github.com/chrischall/tock-mcp/issues/179)) ([5c27639](https://github.com/chrischall/tock-mcp/commit/5c2763957c124d5069e083f2ffd7b40f46c69b3b))
+
 ## [1.2.0](https://github.com/chrischall/tock-mcp/compare/v1.1.9...v1.2.0) (2026-11-04)
 
 
