@@ -4,6 +4,7 @@ import type { McpServer } from '@modelcontextprotocol/server';
 import { type TockClient } from '../client.js';
 import { viewArg, viewResponse } from '../view.js';
 import { parseRestaurant, parseAvailability } from '../parse.js';
+import { foodMeta } from './hints.js';
 
 /** Tock venue slug: the /{slug} path segment (its `domainName`). Reject path
  *  separators / query chars so a slug can't smuggle in another path. */
@@ -27,6 +28,7 @@ export function registerRestaurantTools(
       description:
         'Get details for a Tock venue by slug: name, cuisine, price band, location, description, and its bookable experiences (with prices and party sizes). Slug comes from tock_search_restaurants (or a exploretock.com/{slug} URL).',
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: foodMeta('lookup', { aliases: ['menu', 'restaurant details'] }),
       inputSchema: z.object({
         view: viewArg(),
         slug: VenueSlug,
@@ -61,6 +63,7 @@ export function registerRestaurantTools(
       description:
         "Get a venue's bookable calendar: each experience (seating/menu) with its price, party sizes, cancellation policy, plus the dates and times the venue is open. Tock returns the full open-date/time set; pass a date to focus the summary. Reservations are prepaid tickets — this MCP does not book; open the venue on exploretock.com to reserve.",
       annotations: { readOnlyHint: true, openWorldHint: true },
+      _meta: foodMeta('lookup', { aliases: ['availability', 'open tables', 'reservation times', 'get a table'] }),
       inputSchema: z.object({
         slug: VenueSlug,
         date: DateSchema.describe('YYYY-MM-DD to center the calendar on (optional).'),
